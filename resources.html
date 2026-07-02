@@ -1,20 +1,34 @@
-<title>Resources & Strategy — Texas Hold'em Trainer</title>
+<meta charset="utf-8">
+<title>Texas Hold'em Trainer — Reference</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%230f5638%22 stroke=%22%23e7c45a%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22%23e7c45a%22%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
 
 <header class="app-header">
-  <h1>♠ Texas Hold'em Trainer</h1>
+  <div class="brand"><span class="chip-logo"></span><span class="grad">Hold'em Trainer</span></div>
   <nav>
     <a href="index.html">Play</a>
-    <a href="resources.html">Resources &amp; Strategy</a>
+    <a href="learn.html">Learn</a>
+    <a href="resources.html" class="active">Reference</a>
   </nav>
 </header>
 
-<main class="resources">
-  <h2 style="margin-top:0;">Basic Strategy, Casino Rules &amp; Card-Counting Theory</h2>
-  <p>This page explains the reasoning baked into the trainer: the starting-hand and postflop
-    logic driving the "Strategy Advisor," the real cardroom rules the game is modeled on, and
-    -- since players often ask -- why card counting works completely differently in poker than
-    it does in blackjack, and what the actual equivalent skill is.</p>
+<main class="prose">
+  <div class="page-head">
+    <h1><span class="grad">Reference</span> &amp; Theory</h1>
+    <p>The reasoning baked into the trainer: the starting-hand and postflop logic driving the
+      coach, the real cardroom rules the game is modeled on, and — since players always ask — why
+      card counting works completely differently in poker than in blackjack, and what the actual
+      equivalent skill is.</p>
+  </div>
+
+  <div class="toc">
+    <strong>On this page</strong>
+    <a href="#preflop">Preflop: Chen Formula</a>
+    <a href="#postflop">Postflop: outs &amp; pot odds</a>
+    <a href="#casino-rules">Casino rules</a>
+    <a href="#counting">Card-counting theory</a>
+    <a href="#further">Further reading</a>
+  </div>
 
   <h2 id="preflop">Preflop: the Chen Formula</h2>
   <p>Before the flop, the trainer scores your two hole cards with the <strong>Chen Formula</strong>,

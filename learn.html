@@ -1,0 +1,97 @@
+<meta charset="utf-8">
+<title>Texas Hold'em Trainer — Learn</title>
+<link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%230f5638%22 stroke=%22%23e7c45a%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22%23e7c45a%22%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+
+<header class="app-header">
+  <div class="brand"><span class="chip-logo"></span><span class="grad">Hold'em Trainer</span></div>
+  <nav>
+    <a href="index.html">Play</a>
+    <a href="learn.html" class="active">Learn</a>
+    <a href="resources.html">Reference</a>
+  </nav>
+</header>
+
+<main>
+  <div class="page-head">
+    <h1>Interactive <span class="grad">Learn Lab</span></h1>
+    <p>Three hands-on tools that teach the exact math the in-game coach uses: a color-coded
+      starting-hand chart, a live outs &amp; pot-odds calculator, and a preflop decision quiz that
+      scores you against basic strategy. Everything runs in your browser — no sign-up, no server.</p>
+  </div>
+
+  <!-- ============ RANGE CHART ============ -->
+  <section class="widget">
+    <h2>🎯 Starting-Hand Range Chart</h2>
+    <p class="sub">All 169 starting hands, colored by their <strong>Chen Formula</strong> score. Pairs run
+      down the diagonal, <em>suited</em> hands sit above it, <em>offsuit</em> below. Hover or tap any
+      cell for its score and which positions can open-raise it.</p>
+    <div class="scroll-x"><div class="range-grid" id="range-grid"></div></div>
+    <div class="range-legend" id="range-legend"></div>
+    <div class="range-detail" id="range-detail">
+      <span class="reason" style="color:var(--text-dim)">Hover a hand to see its details…</span>
+    </div>
+  </section>
+
+  <!-- ============ POT ODDS / OUTS CALC ============ -->
+  <section class="widget">
+    <h2>🧮 Outs &amp; Pot-Odds Calculator</h2>
+    <p class="sub">Pick your draw (or set outs directly), enter the pot and the bet you're facing, and see
+      whether the price is right. Uses the <strong>Rule of 4 &amp; 2</strong> for equity — the same method
+      the live coach applies at the table.</p>
+
+    <div style="margin-bottom:1rem;">
+      <label style="font-size:0.78rem;text-transform:uppercase;letter-spacing:0.05em;color:var(--text-dim);font-weight:600;">Common draws</label>
+      <div class="outs-chips" id="draw-presets"></div>
+    </div>
+
+    <div class="calc-grid">
+      <div class="calc-field">
+        <label for="calc-outs">Outs</label>
+        <input type="number" id="calc-outs" value="9" min="0" max="20">
+      </div>
+      <div class="calc-field">
+        <label for="calc-street">Cards to come</label>
+        <select id="calc-street">
+          <option value="2">2 (on the flop)</option>
+          <option value="1">1 (on the turn)</option>
+        </select>
+      </div>
+      <div class="calc-field">
+        <label for="calc-pot">Pot size ($)</label>
+        <input type="number" id="calc-pot" value="100" min="0">
+      </div>
+      <div class="calc-field">
+        <label for="calc-call">Bet to call ($)</label>
+        <input type="number" id="calc-call" value="25" min="0">
+      </div>
+    </div>
+
+    <div class="calc-out" id="calc-out"></div>
+    <div class="calc-verdict" id="calc-verdict"></div>
+  </section>
+
+  <!-- ============ PREFLOP QUIZ ============ -->
+  <section class="widget">
+    <h2>🃏 Preflop Decision Quiz</h2>
+    <p class="sub">A random spot every time: your two cards, your seat, and the action in front of you.
+      Pick the play — the quiz grades it against the Chen-formula baseline and explains why.</p>
+
+    <div class="quiz-scenario" id="quiz-scenario"></div>
+    <div class="quiz-actions" id="quiz-actions"></div>
+    <div class="quiz-feedback" id="quiz-feedback"></div>
+    <div class="quiz-score">
+      <span>Streak: <b id="quiz-streak">0</b></span>
+      <span>Correct: <b id="quiz-correct">0</b> / <b id="quiz-total">0</b></span>
+      <span>Accuracy: <b id="quiz-acc">—</b></span>
+    </div>
+  </section>
+
+  <p class="footer-note">Ready to apply it? Head to the <a href="index.html">table</a>, or read the theory on
+    the <a href="resources.html">Reference</a> page.</p>
+</main>
+
+<script src="js/cards.js"></script>
+<script src="js/strategy.js"></script>
+<script src="js/render.js"></script>
+<script src="js/learn.js"></script>
