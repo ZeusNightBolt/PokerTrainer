@@ -1,0 +1,185 @@
+<title>Resources & Strategy — Texas Hold'em Trainer</title>
+<link rel="stylesheet" href="css/style.css">
+
+<header class="app-header">
+  <h1>♠ Texas Hold'em Trainer</h1>
+  <nav>
+    <a href="index.html">Play</a>
+    <a href="resources.html">Resources &amp; Strategy</a>
+  </nav>
+</header>
+
+<main class="resources">
+  <h2 style="margin-top:0;">Basic Strategy, Casino Rules &amp; Card-Counting Theory</h2>
+  <p>This page explains the reasoning baked into the trainer: the starting-hand and postflop
+    logic driving the "Strategy Advisor," the real cardroom rules the game is modeled on, and
+    -- since players often ask -- why card counting works completely differently in poker than
+    it does in blackjack, and what the actual equivalent skill is.</p>
+
+  <h2 id="preflop">Preflop: the Chen Formula</h2>
+  <p>Before the flop, the trainer scores your two hole cards with the <strong>Chen Formula</strong>,
+    a point-count system published by poker theorist Bill Chen. It's one of the most widely
+    taught "basic strategy" tools for starting-hand selection because, unlike a full 169-hand
+    chart, it's a simple enough calculation to run in your head at the table.</p>
+  <ol>
+    <li>Score your highest card: A = 10, K = 8, Q = 7, J = 6, T = 5, and any card 9 or lower
+      scores half its rank (9 = 4.5, 8 = 4, ... 2 = 1).</li>
+    <li><strong>Pocket pair:</strong> double the score (minimum 5).</li>
+    <li><strong>Suited:</strong> +2.</li>
+    <li><strong>Gap</strong> between your cards (e.g. one gap for A-Q, none for K-Q): 1 gap −1,
+      2 gaps −2, 3 gaps −4, 4+ gaps −5.</li>
+    <li><strong>Straight bonus:</strong> +1 if you have 0 or 1 gap and your high card is a
+      jack or lower (rewards connectors that can make the nut straight from both sides).</li>
+    <li>Round any half-point up.</li>
+  </ol>
+  <p>AA scores a max 20; the trainer's advisor then compares your score to a threshold that
+    tightens in early position and loosens on the button, in the spirit of the position-based
+    tightening principle taught by Wizard of Odds, Upswing Poker, and most other strategy
+    resources (play a narrow, premium range under the gun; widen steadily as you move toward
+    the button, where you'll have the informational advantage of acting last on every
+    postflop street).</p>
+  <table>
+    <thead><tr><th>Position</th><th>Open-raise</th><th>Call a raise</th><th>3-bet</th></tr></thead>
+    <tbody>
+      <tr><td>UTG</td><td>9+</td><td>12+</td><td>16+</td></tr>
+      <tr><td>UTG+1</td><td>8+</td><td>11+</td><td>16+</td></tr>
+      <tr><td>Hijack</td><td>7+</td><td>10+</td><td>15+</td></tr>
+      <tr><td>Cutoff</td><td>6+</td><td>9+</td><td>15+</td></tr>
+      <tr><td>Button</td><td>5+</td><td>8+</td><td>14+</td></tr>
+      <tr><td>Small Blind</td><td>7+</td><td>9+</td><td>15+</td></tr>
+      <tr><td>Big Blind</td><td>check option</td><td>6+ (pot-odds discount)</td><td>14+</td></tr>
+    </tbody>
+  </table>
+  <p class="callout">These thresholds are this trainer's own simplified numbers, built around
+    the Chen Formula's scale and the standard tight-early/loose-late position principle -- they
+    aren't a reproduction of any single site's proprietary chart, since exact published point
+    tables (like Wizard of Odds' 0-40 power ratings) are that site's own copyrighted material.
+    Treat them as a solid, defensible default, not gospel.</p>
+
+  <h2 id="postflop">Postflop: outs, the Rule of 4-and-2, and pot odds</h2>
+  <p>Once the flop is out, hand-strength alone isn't enough -- you need to weigh how often
+    your hand will improve against what the pot is offering you to find out. The trainer's
+    "Outs &amp; Equity Counter" panel automates the three-step process taught in essentially
+    every beginner strategy guide:</p>
+  <ol>
+    <li><strong>Count your outs</strong> -- the unseen cards that would improve your hand to
+      (likely) the best hand: 9 for a flush draw, 8 for an open-ended straight draw, 4 for a
+      gutshot, 2 for a set-completing pocket pair, and so on.</li>
+    <li><strong>Convert outs to equity</strong> with the Rule of 4-and-2: multiply your outs by
+      4 in the flop-to-river estimate, deducting 1 point for every 2 outs beyond 8 (the
+      overestimate correction for big combo draws), or by 2 for a single street.</li>
+    <li><strong>Compare equity to pot odds</strong>: pot odds are
+      <code>amountToCall ÷ (pot + amountToCall)</code>. If your equity beats the pot odds
+      percentage, calling is profitable in isolation; if not, it's a fold unless implied odds
+      make up the difference.</li>
+  </ol>
+  <p>The advisor also value-bets/raises two-pair-or-better hands and defends top pair against
+    reasonably sized bets, folding weaker holdings that lack a real draw. This is intentionally
+    a simplified, rule-based advisor -- it doesn't model opponents' ranges, blockers, or
+    multi-street planning the way a full GTO solver would. Treat it as a floor for
+    fundamentally sound play, not a ceiling.</p>
+
+  <h2 id="casino-rules">Casino Rules Modeled: Borgata &amp; Parx</h2>
+  <p>The trainer's stakes, buy-ins, and rake structures are modeled after two real Northeast
+    U.S. cardrooms so the numbers you see reflect an actual live session, not an abstraction.</p>
+
+  <h3>Borgata Poker Room — Atlantic City, NJ</h3>
+  <table>
+    <thead><tr><th>Stakes</th><th>Buy-in</th><th>Rake / charge</th></tr></thead>
+    <tbody>
+      <tr><td>$1/$3 NLH</td><td>$100 – $400</td><td>10% up to $6, no flop no drop, + $1 Bad Beat Jackpot drop</td></tr>
+      <tr><td>$2/$5 NLH</td><td>$200 – $1,000</td><td>Time charge: $5 / half hour</td></tr>
+      <tr><td>$5/$10 NLH</td><td>$500 – $2,500</td><td>Time charge: $10 / half hour</td></tr>
+      <tr><td>$10/$25 NLH</td><td>$2,500 – uncapped</td><td>Time charge: $15 / half hour</td></tr>
+    </tbody>
+  </table>
+  <p>Maximum 8 players per table (this trainer always seats you 7-handed against 6 bots).</p>
+
+  <h3>Parx Casino Poker Room — Bensalem, PA (Philadelphia area)</h3>
+  <table>
+    <thead><tr><th>Stakes</th><th>Buy-in</th><th>Rake / charge</th></tr></thead>
+    <tbody>
+      <tr><td>$1/$3 NLH</td><td>$100 – $500</td><td>10% up to $5, no flop no drop, + $2 jackpot drop</td></tr>
+      <tr><td>$2/$5 NLH</td><td>$200 – $1,000</td><td>10% up to $5, + $2 jackpot drop</td></tr>
+      <tr><td>$10/$10 &amp; $10/$25 NLH (on demand)</td><td>$1,000+</td><td>Time charge: $12–$15 / half hour</td></tr>
+    </tbody>
+  </table>
+  <p>Straddles are allowed under the gun only; no "kill" games. Parx regularly spreads
+    9-handed, though this trainer keeps every table at 7 (you + 6 bots).</p>
+
+  <p class="sources">Rake and buy-in figures compiled from PokerAtlas cash-game listings,
+    PokerNews room profiles, and Upswing Poker's room reviews as of mid-2026. Live cardrooms
+    revise rake and spreads periodically -- treat these as representative, not a guaranteed
+    current quote, and always confirm the posted rules at the actual table.</p>
+
+  <h2 id="counting">Card-Counting Theory: Why Poker Isn't Blackjack</h2>
+  <p>Every poker trainer eventually gets asked, "should this have a card counter, like the
+    blackjack version?" The honest answer is <strong>no, not in the blackjack sense</strong> --
+    and understanding exactly why is itself a useful piece of poker theory.</p>
+
+  <h3>Why blackjack counting works</h3>
+  <p>Blackjack is dealt from a shoe of several decks that gets played down over many hands
+    before a reshuffle. As high cards (tens and aces) or low cards get used up, the
+    <em>composition of the remaining shoe</em> shifts in a way that changes the game's
+    underlying odds -- a shoe rich in tens and aces favors the player (more blackjacks, better
+    double-down and insurance math). A running count (Hi-Lo and its relatives) tracks that
+    shift hand after hand, because the shoe's memory persists across hands until the next
+    shuffle.</p>
+
+  <h3>Why that doesn't carry over to Hold'em</h3>
+  <p>Live cardrooms -- Borgata and Parx included -- shuffle a fresh 52-card deck for
+    <strong>every single hand</strong>. There is no shoe, no persistent composition, and no
+    penetration to exploit: each hand starts from a uniformly random, unbiased 52-card deck
+    regardless of what happened in the hand before. Tracking "lots of aces came out last
+    hand" tells you precisely nothing useful about this hand's deck, because this hand's deck
+    doesn't exist yet until it's reshuffled. That single structural fact -- reshuffle every
+    hand vs. a multi-hand shoe -- is the entire reason blackjack-style counting has no
+    equivalent in hold'em.</p>
+
+  <h3>What actually works instead</h3>
+  <p>Poker has its own, very real "counting" discipline -- it just operates <em>within</em> a
+    single hand rather than <em>across</em> hands, using the cards you can already see (your
+    two hole cards plus the board) instead of a shoe's history:</p>
+  <ul>
+    <li><strong>Outs counting</strong> -- literally counting the specific cards left in the
+      deck that improve your hand, exactly as described in the Postflop section above. This is
+      the direct, practical analogue of a blackjack count: a number you compute from known
+      information that tells you how to act.</li>
+    <li><strong>The Rule of 4-and-2</strong> -- converting that out count into an equity
+      percentage on the fly, the way a blackjack player converts a running count into a
+      true count and a betting/playing decision.</li>
+    <li><strong>Blockers and combinatorics</strong> -- holding a card removes it from your
+      opponents' possible hands. Holding an ace makes it less likely anyone else has one,
+      which changes how many combinations of a given hand (like AA or AK) are still possible
+      against you. Strong players count these combinations explicitly when reading a range.</li>
+    <li><strong>Range reading and Bayesian updating</strong> -- treating an opponent's
+      preflop/flop/turn actions as evidence that narrows the set of hands they could hold,
+      updating that estimate street by street. This is "counting" in a probabilistic sense:
+      using observed information to narrow down an unknown, the same underlying idea as
+      counting cards, just applied to hidden information instead of a deck.</li>
+  </ul>
+  <p>This is also completely legal and, unlike blackjack card counting, no cardroom will ever
+    ask you to leave for doing it -- you're playing against other players, not the house, and
+    counting outs/combinations is simply sound fundamental strategy rather than an edge taken
+    from the casino.</p>
+
+  <p class="callout">The trainer's <strong>Outs &amp; Equity Counter</strong> panel (visible on
+    the flop and turn during play) is this game's version of a "count": live outs, Rule-of-4-
+    and-2 equity, and the pot odds you're being laid, so you can practice the calculation
+    yourself until it becomes automatic.</p>
+
+  <p class="sources">Card-counting-in-poker background drawn from PokerCoaching.com's
+    "Counting Cards in Poker Is Different," casino.org's "Can You Count Cards in Poker?",
+    and PokerNews' "Counting Cards in Poker" strategy explainer.</p>
+
+  <h2 id="further">Further Reading</h2>
+  <ul>
+    <li>Wizard of Odds -- Texas Hold'em strategy overview (wizardofodds.com/games/texas-hold-em)</li>
+    <li>Bill Chen &amp; Jerrod Ankenman, <em>The Mathematics of Poker</em> -- the academic
+      treatment behind the Chen Formula and modern range-based thinking.</li>
+    <li>PokerAtlas and PokerNews room listings -- for current, room-specific rake and stakes
+      before you play live.</li>
+  </ul>
+
+  <p class="footer-note"><a href="index.html" style="color:var(--accent)">&larr; Back to the table</a></p>
+</main>

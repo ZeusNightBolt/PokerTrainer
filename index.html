@@ -1,0 +1,101 @@
+<title>Texas Hold'em Trainer</title>
+<link rel="stylesheet" href="css/style.css">
+
+<header class="app-header">
+  <h1>♠ Texas Hold'em Trainer</h1>
+  <nav>
+    <a href="index.html">Play</a>
+    <a href="resources.html">Resources &amp; Strategy</a>
+  </nav>
+</header>
+
+<main>
+  <section id="setup-screen" class="setup-panel">
+    <h2>Take a seat</h2>
+    <p>Play 7-handed No-Limit Hold'em against 6 randomized bot opponents, dealt from a fresh
+      shuffle every hand -- just like a real cardroom. Pick a room and stakes to match real
+      posted rules.</p>
+
+    <div class="setup-row">
+      <label for="venue-select">Cardroom</label>
+      <select id="venue-select">
+        <option value="borgata">Borgata Poker Room -- Atlantic City, NJ</option>
+        <option value="parx">Parx Casino Poker Room -- Bensalem, PA (Philadelphia)</option>
+      </select>
+    </div>
+
+    <div class="setup-row">
+      <label for="stake-select">Stakes</label>
+      <select id="stake-select"></select>
+    </div>
+
+    <div class="venue-notes" id="venue-notes"></div>
+
+    <div class="setup-row" style="margin-top:1.25rem;">
+      <label for="name-input">Your name</label>
+      <input id="name-input" type="text" value="You" maxlength="16">
+    </div>
+
+    <button class="primary" id="start-btn">Sit Down</button>
+  </section>
+
+  <section id="game-screen" class="game-layout" style="display:none;">
+    <div>
+      <div class="table-wrap" id="table-wrap">
+        <div class="table-center">
+          <div class="pot-display" id="pot-display">Pot: $0</div>
+          <div class="board-cards" id="board-cards"></div>
+          <div class="street-label" id="street-label"></div>
+        </div>
+        <!-- seat-0 .. seat-6 injected here -->
+      </div>
+
+      <div class="action-bar" id="action-bar">
+        <button class="btn-fold" id="btn-fold">Fold</button>
+        <button class="btn-check" id="btn-check">Check</button>
+        <button class="btn-call" id="btn-call">Call</button>
+        <div class="bet-slider-wrap">
+          <button class="secondary" id="btn-half-pot">1/2 pot</button>
+          <button class="secondary" id="btn-pot">Pot</button>
+          <input type="range" id="bet-slider">
+          <input type="number" id="bet-amount" class="bet-amount-box">
+          <button class="btn-bet" id="btn-bet">Bet/Raise</button>
+          <button class="secondary" id="btn-allin">All-in</button>
+        </div>
+      </div>
+      <div class="hand-over-banner" id="hand-over-banner" style="display:none;"></div>
+    </div>
+
+    <div class="side-panels">
+      <div class="panel">
+        <h3>Strategy Advisor</h3>
+        <div id="advisor-content">Waiting for your turn...</div>
+      </div>
+      <div class="panel">
+        <h3>Outs &amp; Equity Counter</h3>
+        <div class="outs-grid" id="outs-content"></div>
+      </div>
+      <div class="panel">
+        <h3>Session Stats</h3>
+        <div class="stats-grid" id="stats-content"></div>
+        <button class="secondary" id="reset-stats-btn" style="margin-top:0.6rem;">Reset stats</button>
+      </div>
+      <div class="panel">
+        <h3>Hand Log</h3>
+        <div class="log-panel" id="log-content"></div>
+      </div>
+    </div>
+  </section>
+
+  <p class="footer-note">Card counting doesn't carry over between hands in poker the way it does
+    in blackjack -- see the <a href="resources.html" style="color:var(--accent)">Resources page</a>
+    for why, and for the outs/equity counting that actually works.</p>
+</main>
+
+<script src="js/cards.js"></script>
+<script src="js/rules.js"></script>
+<script src="js/strategy.js"></script>
+<script src="js/bots.js"></script>
+<script src="js/game.js"></script>
+<script src="js/stats.js"></script>
+<script src="js/ui.js"></script>
