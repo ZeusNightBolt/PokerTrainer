@@ -2,247 +2,281 @@
   const HUMAN_SEAT = 0;
   let game = null;
   let stats = loadStats();
-  let pendingAdvice = null; // { street, action } captured when action bar is rendered, used to score the human's actual choice
+  let pendingAdvice = null;   // { street, advice } for the current human decision
+  let lastDecision = null;    // { matched, chosenLabel, recLabel, street } after the human acts
   let preHandHumanStack = 0;
+  let coachEnabled = true;
 
   const el = (id) => document.getElementById(id);
+  const ACTION_LABEL = { fold: 'Fold', check: 'Check', call: 'Call', bet: 'Bet', raise: 'Raise', allin: 'All-In' };
 
-  /* ---------- Setup screen ---------- */
+  /* ---------------- Setup ---------------- */
 
   function populateStakes() {
-    const venueKey = el('venue-select').value;
-    const venue = CASINO_RULES[venueKey];
-    const stakeSelect = el('stake-select');
-    stakeSelect.innerHTML = '';
+    const venue = CASINO_RULES[el('venue-select').value];
+    const sel = el('stake-select');
+    sel.innerHTML = '';
     for (const stake of venue.stakes) {
       const opt = document.createElement('option');
       opt.value = stake.key;
-      opt.textContent = `${stake.label} (buy-in $${stake.minBuyIn}-${stake.maxBuyIn || '∞'})`;
-      stakeSelect.appendChild(opt);
+      opt.textContent = `${stake.label}  ·  buy-in $${stake.minBuyIn}–${stake.maxBuyIn || '∞'}`;
+      sel.appendChild(opt);
     }
     renderVenueNotes(venue);
   }
-
   function renderVenueNotes(venue) {
-    const list = venue.notes.map((n) => `<li>${n}</li>`).join('');
-    el('venue-notes').innerHTML = `<strong>${venue.name}</strong><ul>${list}</ul>`;
+    el('venue-notes').innerHTML =
+      `<strong>${venue.name}</strong><ul>${venue.notes.map((n) => `<li>${n}</li>`).join('')}</ul>`;
   }
 
   el('venue-select').addEventListener('change', populateStakes);
   el('stake-select').addEventListener('change', () => renderVenueNotes(CASINO_RULES[el('venue-select').value]));
 
   el('start-btn').addEventListener('click', () => {
-    const venueKey = el('venue-select').value;
-    const stakeKey = el('stake-select').value;
-    const name = el('name-input').value.trim() || 'You';
-    game = new PokerGame(venueKey, stakeKey, name);
+    coachEnabled = el('coach-toggle').checked;
+    el('coach-panel').style.display = coachEnabled ? '' : 'none';
+    game = new PokerGame(el('venue-select').value, el('stake-select').value, el('name-input').value.trim() || 'You');
     el('setup-screen').style.display = 'none';
     el('game-screen').style.display = 'grid';
     dealNextHand();
   });
 
-  /* ---------- Hand flow ---------- */
+  /* ---------------- Hand flow ---------------- */
 
   function dealNextHand() {
     if (!game.humanCanContinue()) {
       const rebuyMax = game.stake.maxBuyIn || game.stake.minBuyIn * 6;
-      const wantsRebuy = confirm(
-        `You're out of chips. Rebuy for $${rebuyMax} and keep playing at ${game.stake.label}?`
-      );
-      if (!wantsRebuy) {
-        el('hand-over-banner').style.display = 'block';
-        el('hand-over-banner').textContent = 'Session over. Refresh to sit down again.';
-        el('action-bar').style.display = 'none';
+      if (!confirm(`You're out of chips. Rebuy for $${rebuyMax} and keep playing ${game.stake.label}?`)) {
+        el('hand-result').style.display = 'block';
+        el('hand-result').innerHTML = '<div class="headline">Session over</div><div class="detail">Refresh to sit down again.</div>';
+        el('action-dock').style.display = 'none';
         return;
       }
       game.rebuyHuman(rebuyMax);
     }
-    el('hand-over-banner').style.display = 'none';
+    el('hand-result').style.display = 'none';
     game.newHand();
     preHandHumanStack = game.seats[HUMAN_SEAT].stack + game.seats[HUMAN_SEAT].committedHand;
     pendingAdvice = null;
+    lastDecision = null;
     advance();
   }
 
   function advance() {
     const status = game.runBotsUntilHumanOrDone();
     render();
-    if (status.handOver) {
-      finishHand();
-    } else {
-      setupAdvisorAndActionBar();
-    }
+    if (status.handOver) finishHand();
+    else setupTurn();
   }
 
   function finishHand() {
-    const human = game.seats[HUMAN_SEAT];
-    const net = human.stack - preHandHumanStack;
-    el('action-bar').style.display = 'none';
-    el('hand-over-banner').style.display = 'block';
-    const result = game.lastResult;
-    const summary = result.showdown
-      ? `Showdown -- ${result.pots.map((p) => `${p.winners.map((w) => game.seats[w].name).join('/')} won $${Math.round(p.amount)} (${p.handDescription})`).join('; ')}`
-      : 'Hand won uncontested.';
-    el('hand-over-banner').innerHTML = `${summary}<br><button class="primary" id="next-hand-btn" style="margin-top:0.6rem;">Deal Next Hand</button>`;
+    const net = game.seats[HUMAN_SEAT].stack - preHandHumanStack;
+    el('action-dock').style.display = 'none';
+    const r = game.lastResult;
+    const summary = r.showdown
+      ? r.pots.map((p) => `${p.winners.map((w) => game.seats[w].name).join(' / ')} won $${Math.round(p.amount)} · ${p.handDescription}`).join('<br>')
+      : 'Won uncontested.';
+    const netCls = net > 0 ? 'net-up' : net < 0 ? 'net-down' : '';
+    const netStr = net > 0 ? `+$${Math.round(net)}` : net < 0 ? `-$${Math.abs(Math.round(net))}` : 'Even';
+    let coachTail = '';
+    if (coachEnabled && lastDecision) {
+      const mark = lastDecision.matched ? '✓ matched basic strategy' : `✗ deviated (rec: ${lastDecision.recLabel})`;
+      coachTail = `<div class="detail">Last decision: <strong style="color:${lastDecision.matched ? 'var(--good)' : 'var(--bad)'}">${mark}</strong></div>`;
+    }
+    el('hand-result').style.display = 'block';
+    el('hand-result').innerHTML =
+      `<div class="headline">Hand #${game.handNumber} · <span class="${netCls}">${netStr}</span></div>` +
+      `<div class="detail">${summary}</div>${coachTail}` +
+      `<button class="btn gold" id="next-hand-btn">Deal Next Hand ▸</button>`;
     el('next-hand-btn').addEventListener('click', dealNextHand);
-
     stats = recordHandResult(stats, net);
     renderStats();
+    renderCoachIdle();
   }
 
-  /* ---------- Advisor + action bar ---------- */
+  /* ---------------- Human turn ---------------- */
 
-  function setupAdvisorAndActionBar() {
+  function setupTurn() {
     const seat = game.currentActorSeat();
-    if (seat !== HUMAN_SEAT) return; // shouldn't happen, runBotsUntilHumanOrDone stops at human turn or hand end
+    if (seat !== HUMAN_SEAT) return;
     const human = game.seats[HUMAN_SEAT];
     const legal = game.legalActionsFor(HUMAN_SEAT);
-    const position = game.roles[HUMAN_SEAT];
     const pot = game.potTotal();
 
-    let advice;
-    if (game.board.length === 0) {
-      advice = preflopAdvice({
-        holeCards: human.holeCards,
-        position,
-        numRaisesInFront: game.numRaisesInFrontFor(HUMAN_SEAT),
-      });
-    } else {
-      advice = postflopAdvice({
-        holeCards: human.holeCards,
-        board: game.board,
-        pot,
-        toCall: legal.callAmount,
-      });
-    }
+    const advice = game.board.length === 0
+      ? preflopAdvice({ holeCards: human.holeCards, position: game.roles[HUMAN_SEAT], numRaisesInFront: game.numRaisesInFrontFor(HUMAN_SEAT) })
+      : postflopAdvice({ holeCards: human.holeCards, board: game.board, pot, toCall: legal.callAmount });
     pendingAdvice = { street: game.street, advice };
-    renderAdvisor(advice, legal);
+
+    renderCoach(advice);
     renderOuts(human, legal, pot);
-    renderActionBar(legal, pot);
+    renderActionDock(advice, legal, pot);
   }
 
-  function renderAdvisor(advice, legal) {
-    const label = { fold: 'Fold', check: 'Check', call: 'Call', bet: 'Bet', raise: 'Raise' }[advice.action];
-    el('advisor-content').innerHTML = `
-      <div class="advisor-line">Basic strategy suggests: <strong>${label}</strong></div>
-      <div class="advisor-reason">${advice.reason}</div>
-    `;
-  }
+  function renderActionDock(advice, legal, pot) {
+    el('action-dock').style.display = 'block';
+    const recLabel = ACTION_LABEL[advice.action] || advice.action;
+    el('action-hint').innerHTML = coachEnabled
+      ? `<span>Coach suggests</span> <span class="rec">${recLabel}</span>`
+      : `<span>Your action</span>`;
 
-  function renderOuts(human, legal, pot) {
-    const board = game.board;
-    const container = el('outs-content');
-    if (board.length === 0) {
-      const score = chenScore(human.holeCards[0], human.holeCards[1]);
-      container.innerHTML = `
-        <div>Chen score</div><div class="value">${score}</div>
-        <div>Position</div><div class="value">${game.roles[HUMAN_SEAT]}</div>
-      `;
-      return;
-    }
-    if (board.length >= 5) {
-      const best = evaluateBest([...human.holeCards, ...board]);
-      container.innerHTML = `<div>Made hand</div><div class="value">${describeScore(best.score)}</div>`;
-      return;
-    }
-    const { outs, cardsToCome } = countOuts(human.holeCards, board);
-    const equity = equityFromOuts(outs, cardsToCome);
-    const oddsNeeded = potOddsPercent(legal.callAmount, pot);
-    container.innerHTML = `
-      <div>Outs</div><div class="value">${outs}</div>
-      <div>Equity (Rule of ${cardsToCome === 2 ? '4' : '2'})</div><div class="value">${equity}%</div>
-      <div>Pot odds needed</div><div class="value">${legal.callAmount > 0 ? oddsNeeded.toFixed(1) + '%' : '--'}</div>
-      <div>Correct price?</div><div class="value">${legal.callAmount > 0 ? (equity >= oddsNeeded ? 'Yes' : 'No') : '--'}</div>
-    `;
-  }
-
-  function renderActionBar(legal, pot) {
-    const bar = el('action-bar');
-    bar.style.display = 'flex';
     el('btn-fold').disabled = false;
     el('btn-check').disabled = !legal.canCheck;
     el('btn-call').disabled = !legal.canCall;
     el('btn-call').textContent = legal.canCall ? `Call $${legal.callAmount}` : 'Call';
     el('btn-bet').disabled = !legal.canRaise;
-    el('btn-bet').textContent = legal.canCall ? 'Raise' : 'Bet';
-    el('btn-allin').disabled = legal.maxRaiseTo <= 0;
+    el('btn-bet').textContent = legal.canCall ? 'Raise ▸' : 'Bet ▸';
 
-    const slider = el('bet-slider');
-    const amountBox = el('bet-amount');
-    slider.min = legal.minRaiseTo;
-    slider.max = legal.maxRaiseTo;
-    slider.value = legal.minRaiseTo;
-    amountBox.value = legal.minRaiseTo;
-    slider.disabled = !legal.canRaise;
-    amountBox.disabled = !legal.canRaise;
-
-    slider.oninput = () => { amountBox.value = slider.value; };
-    amountBox.oninput = () => { slider.value = amountBox.value; };
-
-    el('btn-half-pot').onclick = () => setBetTarget(legal, Math.round(legal.callAmount + pot * 0.5));
-    el('btn-pot').onclick = () => setBetTarget(legal, Math.round(legal.callAmount + pot));
+    const showBet = legal.canRaise;
+    el('bet-controls').style.display = showBet ? 'flex' : 'none';
+    if (showBet) {
+      const slider = el('bet-slider');
+      const box = el('bet-amount');
+      slider.min = legal.minRaiseTo; slider.max = legal.maxRaiseTo; slider.value = legal.minRaiseTo;
+      box.value = legal.minRaiseTo;
+      slider.oninput = () => { box.value = slider.value; };
+      box.oninput = () => { slider.value = box.value; };
+      const setTarget = (t) => {
+        const c = Math.max(legal.minRaiseTo, Math.min(legal.maxRaiseTo, Math.round(t)));
+        slider.value = c; box.value = c;
+      };
+      el('btn-half-pot').onclick = () => setTarget(legal.callAmount + pot * 0.5);
+      el('btn-3q-pot').onclick = () => setTarget(legal.callAmount + pot * 0.75);
+      el('btn-pot').onclick = () => setTarget(legal.callAmount + pot);
+      el('btn-allin').onclick = () => submitHumanAction('allin');
+    }
 
     el('btn-fold').onclick = () => submitHumanAction('fold');
     el('btn-check').onclick = () => submitHumanAction('check');
     el('btn-call').onclick = () => submitHumanAction('call');
-    el('btn-bet').onclick = () => submitHumanAction(legal.canCall ? 'raise' : 'bet', Number(amountBox.value));
-    el('btn-allin').onclick = () => submitHumanAction('allin');
-  }
-
-  function setBetTarget(legal, target) {
-    const clamped = Math.max(legal.minRaiseTo, Math.min(legal.maxRaiseTo, target));
-    el('bet-slider').value = clamped;
-    el('bet-amount').value = clamped;
+    el('btn-bet').onclick = () => submitHumanAction(legal.canCall ? 'raise' : 'bet', Number(el('bet-amount').value));
   }
 
   function submitHumanAction(action, amount) {
     if (pendingAdvice) {
-      const matched = action === pendingAdvice.advice.action ||
-        (['bet', 'raise', 'allin'].includes(action) && ['bet', 'raise'].includes(pendingAdvice.advice.action));
+      const rec = pendingAdvice.advice.action;
+      const matched = action === rec ||
+        (['bet', 'raise', 'allin'].includes(action) && ['bet', 'raise'].includes(rec));
+      lastDecision = {
+        matched,
+        chosenLabel: ACTION_LABEL[action],
+        recLabel: ACTION_LABEL[rec] || rec,
+        street: pendingAdvice.street,
+      };
       stats = recordDecision(stats, { street: pendingAdvice.street, matched });
       renderStats();
     }
-    const preStack = game.seats[HUMAN_SEAT].stack;
     game.act(HUMAN_SEAT, action, amount);
     advance();
   }
 
-  /* ---------- Rendering ---------- */
+  /* ---------------- Coach panel ---------------- */
 
-  function cardEl(card, small) {
-    const cls = `card${card.isRed ? ' red' : ''}${small ? ' small' : ''}`;
-    return `<div class="${cls}">${card.label}</div>`;
+  function renderCoach(advice) {
+    if (!coachEnabled) return;
+    const recLabel = ACTION_LABEL[advice.action] || advice.action;
+    let fb = '';
+    if (lastDecision) {
+      const cls = lastDecision.matched ? 'good' : 'bad';
+      const txt = lastDecision.matched
+        ? `Last: ${lastDecision.chosenLabel} ✓`
+        : `Last: ${lastDecision.chosenLabel} ✗ (rec ${lastDecision.recLabel})`;
+      fb = `<div class="feedback"><span class="verdict ${cls}">${txt}</span></div>`;
+    }
+    el('coach-content').innerHTML =
+      `<span class="verdict rec">Recommend: ${recLabel}</span>` +
+      `<div class="reason">${advice.reason}</div>${fb}`;
   }
 
-  function backCardEl() {
-    return '<div class="card small back"></div>';
+  function renderCoachIdle() {
+    if (!coachEnabled) return;
+    if (lastDecision) {
+      const cls = lastDecision.matched ? 'good' : 'bad';
+      const txt = lastDecision.matched
+        ? `${lastDecision.chosenLabel} — matched basic strategy ✓`
+        : `${lastDecision.chosenLabel} — deviated from ${lastDecision.recLabel} ✗`;
+      el('coach-content').innerHTML = `<span class="verdict ${cls}">${txt}</span><div class="reason">Deal the next hand to continue.</div>`;
+    } else {
+      el('coach-content').innerHTML = '<span class="reason">You folded or the hand played out without a decision from you.</span>';
+    }
   }
+
+  /* ---------------- Outs / equity ---------------- */
+
+  function renderOuts(human, legal, pot) {
+    const board = game.board;
+    const c = el('outs-content');
+    if (board.length === 0) {
+      const score = chenScore(human.holeCards[0], human.holeCards[1]);
+      const tier = score >= 9 ? 'good' : score >= 5 ? 'gold' : 'bad';
+      c.innerHTML =
+        `<span class="k">Chen score</span><span class="v ${tier}">${score}</span>` +
+        `<span class="k">Position</span><span class="v">${game.roles[HUMAN_SEAT]}</span>` +
+        `<span class="k">Hand</span><span class="v">${holeLabel(human.holeCards)}</span>`;
+      return;
+    }
+    if (board.length >= 5) {
+      const best = evaluateBest([...human.holeCards, ...board]);
+      c.innerHTML = `<span class="k">Made hand</span><span class="v gold">${describeScore(best.score)}</span>`;
+      return;
+    }
+    const { outs, cardsToCome } = countOuts(human.holeCards, board);
+    const equity = equityFromOuts(outs, cardsToCome);
+    const oddsNeeded = potOddsPercent(legal.callAmount, pot);
+    const facing = legal.callAmount > 0;
+    const priceOk = equity >= oddsNeeded;
+    c.innerHTML =
+      `<span class="k">Outs</span><span class="v gold">${outs}</span>` +
+      `<span class="k">Equity (Rule of ${cardsToCome === 2 ? '4' : '2'})</span><span class="v">${equity}%</span>` +
+      `<div class="meter equity"><span style="width:${Math.min(equity, 100)}%"></span></div>` +
+      `<span class="k">Pot odds needed</span><span class="v">${facing ? oddsNeeded.toFixed(1) + '%' : '—'}</span>` +
+      `<span class="k">Correct price?</span><span class="v ${facing ? (priceOk ? 'good' : 'bad') : ''}">${facing ? (priceOk ? 'Yes ✓' : 'No ✗') : '—'}</span>`;
+  }
+
+  function holeLabel(cards) {
+    const RL = { 14: 'A', 13: 'K', 12: 'Q', 11: 'J', 10: 'T' };
+    const lbl = (r) => RL[r] || String(r);
+    const [a, b] = [...cards].sort((x, y) => y.rank - x.rank);
+    if (a.rank === b.rank) return lbl(a.rank) + lbl(b.rank);
+    return lbl(a.rank) + lbl(b.rank) + (a.suit === b.suit ? 's' : 'o');
+  }
+
+  /* ---------------- Table render ---------------- */
 
   function render() {
     const state = game.getPublicState();
-    el('pot-display').textContent = `Pot: $${state.pot}`;
-    el('board-cards').innerHTML = state.board.map((c) => cardEl(c)).join('') || '<span style="color:#556;">-- preflop --</span>';
-    el('street-label').textContent = `${state.venue} -- ${state.stakeLabel} -- ${state.street.toUpperCase()}`;
+    el('pot-display').textContent = `Pot $${state.pot}`;
+    el('board-cards').innerHTML = state.board.length
+      ? state.board.map((c) => cardFaceHTML(c)).join('')
+      : '<span class="board-empty">Pre-flop</span>';
+    el('street-label').textContent = `${state.venue.split('—')[0].trim()} · ${state.stakeLabel.split(' ')[0]} · ${state.street.toUpperCase()}`;
+
+    const winners = new Set();
+    if (state.lastResult) for (const p of state.lastResult.pots) for (const w of p.winners) winners.add(w);
 
     const wrap = el('table-wrap');
     wrap.querySelectorAll('.seat').forEach((n) => n.remove());
     for (const s of state.seats) {
       const div = document.createElement('div');
       div.className = `seat seat-${s.seat}` +
-        (s.folded ? ' folded' : '') +
-        (s.isHuman ? ' human' : '') +
-        (state.actor === s.seat ? ' acting' : '');
-      const cardsHtml = s.holeCards
-        ? s.holeCards.map((c) => cardEl(c, true)).join('')
-        : (s.folded ? '' : backCardEl() + backCardEl());
-      div.innerHTML = `
-        ${state.buttonSeat === s.seat ? '<div class="dealer-chip">D</div>' : ''}
-        <div class="seat-name">${s.name}</div>
-        <div class="seat-role">${state.roles[s.seat] || ''}</div>
-        <div class="seat-cards">${cardsHtml}</div>
-        <div class="seat-stack">$${s.stack}</div>
-        <div class="seat-bet">${s.committedRound > 0 ? 'Bet $' + s.committedRound : ''}${s.allIn ? ' (all-in)' : ''}</div>
-      `;
+        (s.folded ? ' folded' : '') + (s.isHuman ? ' human' : '') +
+        (state.actor === s.seat ? ' acting' : '') +
+        (winners.has(s.seat) ? ' winner' : '');
+      const cards = s.holeCards
+        ? s.holeCards.map((c) => cardFaceHTML(c, { small: true })).join('')
+        : (s.folded ? '' : cardBackHTML(true) + cardBackHTML(true));
+      const avatarIco = s.isHuman ? '🧑' : '🤖';
+      div.innerHTML =
+        (state.buttonSeat === s.seat ? '<div class="dealer-chip">D</div>' : '') +
+        `<div class="seat-inner">` +
+        `<div class="avatar">${avatarIco}</div>` +
+        `<div class="seat-name">${s.name}</div>` +
+        `<div class="seat-role">${state.roles[s.seat] || ''}</div>` +
+        `<div class="seat-cards">${cards}</div>` +
+        `<div class="seat-stack">$${s.stack}</div>` +
+        (s.committedRound > 0 ? `<div class="seat-bet"><span class="chip-dot"></span>$${s.committedRound}</div>` : '') +
+        (s.allIn ? '<div class="badge-allin">ALL-IN</div>' : '') +
+        `</div>`;
       wrap.appendChild(div);
     }
 
@@ -252,23 +286,22 @@
   }
 
   function renderStats() {
-    const preflopPct = stats.preflopDecisions ? Math.round((100 * stats.preflopMatched) / stats.preflopDecisions) : 0;
-    const postflopPct = stats.postflopDecisions ? Math.round((100 * stats.postflopMatched) / stats.postflopDecisions) : 0;
-    const overallPct = stats.decisionsTracked ? Math.round((100 * stats.decisionsMatched) / stats.decisionsTracked) : 0;
-    el('stats-content').innerHTML = `
-      <div>Hands played</div><div class="value">${stats.handsPlayed}</div>
-      <div>Overall strategy match</div><div class="value">${overallPct}%</div>
-      <div>Preflop match</div><div class="value">${preflopPct}%</div>
-      <div>Postflop match</div><div class="value">${postflopPct}%</div>
-    `;
+    const pct = (m, d) => (d ? Math.round((100 * m) / d) : 0);
+    const overall = pct(stats.decisionsMatched, stats.decisionsTracked);
+    const net = Math.round(stats.netWon);
+    const netCls = net > 0 ? 'good' : net < 0 ? 'bad' : '';
+    el('stats-content').innerHTML =
+      `<span class="k">Hands played</span><span class="v">${stats.handsPlayed}</span>` +
+      `<span class="k">Net result</span><span class="v ${netCls}">${net >= 0 ? '+' : '-'}$${Math.abs(net)}</span>` +
+      `<span class="k">Strategy match</span><span class="v gold">${overall}%</span>` +
+      `<div class="meter"><span style="width:${overall}%"></span></div>` +
+      `<span class="k">Preflop</span><span class="v">${pct(stats.preflopMatched, stats.preflopDecisions)}%</span>` +
+      `<span class="k">Postflop</span><span class="v">${pct(stats.postflopMatched, stats.postflopDecisions)}%</span>`;
   }
 
-  el('reset-stats-btn').addEventListener('click', () => {
-    stats = resetStats();
-    renderStats();
-  });
+  el('reset-stats-btn').addEventListener('click', () => { stats = resetStats(); renderStats(); });
 
-  /* ---------- Init ---------- */
+  /* ---------------- Init ---------------- */
   populateStakes();
   renderStats();
 })();

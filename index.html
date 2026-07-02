@@ -1,95 +1,137 @@
-<title>Texas Hold'em Trainer</title>
+<meta charset="utf-8">
+<title>Texas Hold'em Trainer — Play</title>
 <link rel="stylesheet" href="css/style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%230f5638%22 stroke=%22%23e7c45a%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22%23e7c45a%22%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
 
 <header class="app-header">
-  <h1>♠ Texas Hold'em Trainer</h1>
+  <div class="brand"><span class="chip-logo"></span><span class="grad">Hold'em Trainer</span></div>
   <nav>
-    <a href="index.html">Play</a>
-    <a href="resources.html">Resources &amp; Strategy</a>
+    <a href="index.html" class="active">Play</a>
+    <a href="learn.html">Learn</a>
+    <a href="resources.html">Reference</a>
   </nav>
 </header>
 
 <main>
-  <section id="setup-screen" class="setup-panel">
-    <h2>Take a seat</h2>
-    <p>Play 7-handed No-Limit Hold'em against 6 randomized bot opponents, dealt from a fresh
-      shuffle every hand -- just like a real cardroom. Pick a room and stakes to match real
-      posted rules.</p>
-
-    <div class="setup-row">
-      <label for="venue-select">Cardroom</label>
-      <select id="venue-select">
-        <option value="borgata">Borgata Poker Room -- Atlantic City, NJ</option>
-        <option value="parx">Parx Casino Poker Room -- Bensalem, PA (Philadelphia)</option>
-      </select>
+  <!-- ================= SETUP ================= -->
+  <section id="setup-screen" class="setup-wrap">
+    <div class="setup-hero">
+      <h1>Sharpen your <span class="grad">No-Limit Hold'em</span></h1>
+      <p>Play 7-handed against 6 randomized opponents, dealt from a fresh shuffle every hand
+        under real cardroom rules. A live coach grades every decision against basic strategy.</p>
     </div>
 
-    <div class="setup-row">
-      <label for="stake-select">Stakes</label>
-      <select id="stake-select"></select>
+    <div class="setup-card">
+      <div class="setup-row">
+        <label for="venue-select">Cardroom</label>
+        <select id="venue-select">
+          <option value="borgata">Borgata Poker Room — Atlantic City, NJ</option>
+          <option value="parx">Parx Casino Poker Room — Bensalem, PA (Philadelphia)</option>
+        </select>
+      </div>
+      <div class="setup-row">
+        <label for="stake-select">Stakes</label>
+        <select id="stake-select"></select>
+      </div>
+      <div class="setup-row">
+        <div class="venue-notes" id="venue-notes"></div>
+      </div>
+      <div class="setup-row">
+        <label for="name-input">Your name</label>
+        <input id="name-input" type="text" value="You" maxlength="16">
+      </div>
+      <div class="setup-row" style="margin-bottom:0;">
+        <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">
+          <input type="checkbox" id="coach-toggle" checked style="width:auto;"> Show live coaching &amp; decision grading
+        </label>
+      </div>
+      <button class="btn primary" id="start-btn">Sit Down &amp; Deal</button>
     </div>
 
-    <div class="venue-notes" id="venue-notes"></div>
-
-    <div class="setup-row" style="margin-top:1.25rem;">
-      <label for="name-input">Your name</label>
-      <input id="name-input" type="text" value="You" maxlength="16">
+    <div class="setup-tips">
+      <div class="tip">
+        <div class="t-ico">🎓</div>
+        <div class="t-title">Learn as you play</div>
+        <div class="t-body">Every action is compared to the Chen-formula &amp; pot-odds baseline, with a reason.</div>
+      </div>
+      <div class="tip">
+        <div class="t-ico">🧮</div>
+        <div class="t-title">Live outs &amp; equity</div>
+        <div class="t-body">See your outs, Rule-of-4-and-2 equity, and the price the pot is laying you.</div>
+      </div>
+      <div class="tip">
+        <div class="t-ico">🏦</div>
+        <div class="t-title">Real rake &amp; stakes</div>
+        <div class="t-body">Borgata &amp; Parx blinds, buy-ins and rake modeled from posted cardroom rules.</div>
+      </div>
     </div>
-
-    <button class="primary" id="start-btn">Sit Down</button>
   </section>
 
+  <!-- ================= GAME ================= -->
   <section id="game-screen" class="game-layout" style="display:none;">
     <div>
       <div class="table-wrap" id="table-wrap">
+        <div class="table-felt-logo">Hold'em Trainer</div>
         <div class="table-center">
-          <div class="pot-display" id="pot-display">Pot: $0</div>
+          <div class="pot-pill" id="pot-display">Pot $0</div>
           <div class="board-cards" id="board-cards"></div>
-          <div class="street-label" id="street-label"></div>
+          <div class="street-badge" id="street-label"></div>
         </div>
-        <!-- seat-0 .. seat-6 injected here -->
+        <!-- seats injected here -->
       </div>
 
-      <div class="action-bar" id="action-bar">
-        <button class="btn-fold" id="btn-fold">Fold</button>
-        <button class="btn-check" id="btn-check">Check</button>
-        <button class="btn-call" id="btn-call">Call</button>
-        <div class="bet-slider-wrap">
-          <button class="secondary" id="btn-half-pot">1/2 pot</button>
-          <button class="secondary" id="btn-pot">Pot</button>
-          <input type="range" id="bet-slider">
-          <input type="number" id="bet-amount" class="bet-amount-box">
-          <button class="btn-bet" id="btn-bet">Bet/Raise</button>
-          <button class="secondary" id="btn-allin">All-in</button>
+      <!-- action dock -->
+      <div class="action-dock" id="action-dock" style="display:none;">
+        <div class="action-hint" id="action-hint"></div>
+        <div class="action-main">
+          <button class="btn btn-fold" id="btn-fold">Fold</button>
+          <button class="btn btn-check" id="btn-check">Check</button>
+          <button class="btn btn-call" id="btn-call">Call</button>
+          <button class="btn btn-bet" id="btn-bet">Bet</button>
+        </div>
+        <div class="bet-controls" id="bet-controls">
+          <div class="bet-presets">
+            <button class="btn ghost" data-frac="0.5" id="btn-half-pot">½ Pot</button>
+            <button class="btn ghost" data-frac="0.75" id="btn-3q-pot">¾ Pot</button>
+            <button class="btn ghost" data-frac="1" id="btn-pot">Pot</button>
+            <button class="btn ghost" id="btn-allin">All-In</button>
+          </div>
+          <div class="slider-wrap">
+            <input type="range" id="bet-slider">
+            <input type="number" id="bet-amount" class="bet-amount-box">
+          </div>
         </div>
       </div>
-      <div class="hand-over-banner" id="hand-over-banner" style="display:none;"></div>
+
+      <!-- hand result -->
+      <div class="hand-result" id="hand-result" style="display:none;"></div>
     </div>
 
-    <div class="side-panels">
-      <div class="panel">
-        <h3>Strategy Advisor</h3>
-        <div id="advisor-content">Waiting for your turn...</div>
+    <!-- side column -->
+    <div class="side-col">
+      <div class="panel coach" id="coach-panel">
+        <h3><span class="ico">🎓</span> Coach</h3>
+        <div id="coach-content"><span class="reason">Waiting for your turn…</span></div>
       </div>
       <div class="panel">
-        <h3>Outs &amp; Equity Counter</h3>
-        <div class="outs-grid" id="outs-content"></div>
+        <h3><span class="ico">🧮</span> Outs &amp; Equity</h3>
+        <div class="metrics" id="outs-content"></div>
       </div>
       <div class="panel">
-        <h3>Session Stats</h3>
-        <div class="stats-grid" id="stats-content"></div>
-        <button class="secondary" id="reset-stats-btn" style="margin-top:0.6rem;">Reset stats</button>
+        <h3><span class="ico">📊</span> Session</h3>
+        <div class="metrics" id="stats-content"></div>
+        <button class="btn ghost" id="reset-stats-btn" style="margin-top:0.7rem;width:100%;font-size:0.82rem;padding:0.4rem;">Reset stats</button>
       </div>
       <div class="panel">
-        <h3>Hand Log</h3>
-        <div class="log-panel" id="log-content"></div>
+        <h3><span class="ico">📜</span> Hand Log</h3>
+        <div class="log" id="log-content"></div>
       </div>
     </div>
   </section>
 
-  <p class="footer-note">Card counting doesn't carry over between hands in poker the way it does
-    in blackjack -- see the <a href="resources.html" style="color:var(--accent)">Resources page</a>
-    for why, and for the outs/equity counting that actually works.</p>
+  <p class="footer-note">New to this? Start on the <a href="learn.html">Learn</a> page — range chart, an
+    outs/pot-odds calculator, and a preflop quiz. Curious why blackjack card-counting doesn't work in
+    poker? That's on the <a href="resources.html">Reference</a> page.</p>
 </main>
 
 <script src="js/cards.js"></script>
@@ -98,4 +140,5 @@
 <script src="js/bots.js"></script>
 <script src="js/game.js"></script>
 <script src="js/stats.js"></script>
+<script src="js/render.js"></script>
 <script src="js/ui.js"></script>
