@@ -6,10 +6,17 @@ A browser-based No-Limit Texas Hold'em trainer, in the same spirit as a blackjac
 trainer: play real hands against randomized bot opponents, get a live strategy recommendation
 on every decision, and track how often your play matches basic strategy over a session.
 
+**Live site: https://zeusnightbolt.github.io/PokerTrainer/**
+
 ## Play
 
-Open `index.html` in a browser (no build step, no server required beyond static file hosting --
-e.g. `python3 -m http.server` from the repo root, then visit `http://localhost:8000`).
+Open the live site above, or run it locally: open `index.html` in a browser (no build step, no
+server required beyond static file hosting -- e.g. `python3 -m http.server` from the repo root,
+then visit `http://localhost:8000`).
+
+The site is deployed automatically by `.github/workflows/deploy-pages.yml` on every push to
+`main`, via GitHub Pages with the "GitHub Actions" source (no build step -- the repo root is
+uploaded as-is).
 
 - **7-handed table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per hand.
 - **Real casino rules**: pick Borgata (Atlantic City) or Parx (Bensalem/Philadelphia) and a
