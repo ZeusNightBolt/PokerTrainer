@@ -13,9 +13,12 @@
 const { Deck, evaluateBest, compareScores, describeScore } = (typeof module !== 'undefined' && module.exports ? require('./cards.js') : window);
 const { makeBotPersonality, decideBotAction } = (typeof module !== 'undefined' && module.exports ? require('./bots.js') : window);
 const { POSITIONS_7MAX } = (typeof module !== 'undefined' && module.exports ? require('./strategy.js') : window);
+const { estimatePreflopEquities } = (typeof module !== 'undefined' && module.exports ? require('./equity.js') : window);
 
 const SEAT_COUNT = 7;
 const HANDS_PER_HALF_HOUR = 25; // rough live-table pace, used to prorate time-charge rake per hand
+const HUMAN_SEAT_INDEX = 0; // seat 0 is always the human (see PokerGame constructor)
+const EQUITY_SAMPLES = 250; // Monte Carlo sample count for the variance/luck tracker
 
 function seatOffset(seat, offset) {
   return (seat + offset) % SEAT_COUNT;
@@ -330,6 +333,9 @@ class PokerGame {
 
     let rakeRemaining = rake.amount;
     const pots = [];
+    const actualWon = {};
+    const evWon = {};
+    const eligibleTotal = {};
     for (const layer of layers) {
       let layerAmount = layer.amount;
       if (rakeRemaining > 0) {
@@ -359,14 +365,51 @@ class PokerGame {
       for (const w of orderedWinners) {
         const bonusCents = remainderCents > 0 ? 1 : 0;
         if (remainderCents > 0) remainderCents--;
-        this.seats[w].stack += (shareCents + bonusCents) / 100;
+        const amt = (shareCents + bonusCents) / 100;
+        this.seats[w].stack += amt;
+        actualWon[w] = (actualWon[w] || 0) + amt;
       }
       pots.push({ amount: layerAmount, winners: orderedWinners, handDescription: describeScore(best.score) });
+
+      // Variance/luck tracking: each eligible seat's PREFLOP equity share of
+      // this layer, regardless of who actually won it. Computed per-layer
+      // (not once for the whole pot) so side pots credit equity only to the
+      // seats that were actually eligible to win them.
+      //
+      // Only bother running the Monte Carlo when the human is actually in
+      // this pot -- the UI never shows any other seat's variance, and in a
+      // 7-handed game most showdowns don't involve the human at all, so
+      // skipping those keeps this from being a real cost on every hand.
+      if (layerAmount > 0 && eligible.includes(HUMAN_SEAT_INDEX)) {
+        if (eligible.length > 1) {
+          const equities = estimatePreflopEquities(eligible.map((seat) => this.seats[seat].holeCards), EQUITY_SAMPLES);
+          eligible.forEach((seat, i) => {
+            evWon[seat] = (evWon[seat] || 0) + equities[i].equity * layerAmount;
+            eligibleTotal[seat] = (eligibleTotal[seat] || 0) + layerAmount;
+          });
+        } else {
+          evWon[eligible[0]] = (evWon[eligible[0]] || 0) + layerAmount;
+          eligibleTotal[eligible[0]] = (eligibleTotal[eligible[0]] || 0) + layerAmount;
+        }
+      }
     }
 
     for (const p of pots) {
       const names = p.winners.map((seat) => this.seats[seat].name).join(', ');
       this.addLog(`${names} win $${p.amount} with ${p.handDescription}.`);
+    }
+
+    const variance = {};
+    for (const seat of Object.keys(evWon).map(Number)) {
+      const ev = evWon[seat];
+      const actual = actualWon[seat] || 0;
+      const total = eligibleTotal[seat] || 0;
+      variance[seat] = {
+        equityPct: total > 0 ? ev / total : null,
+        evAmount: ev,
+        actualAmount: actual,
+        luckDelta: actual - ev,
+      };
     }
 
     this.lastResult = {
@@ -375,6 +418,7 @@ class PokerGame {
       pots,
       rake,
       hands,
+      variance,
     };
   }
 

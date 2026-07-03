@@ -19,9 +19,14 @@ function randRange(min, max) {
 
 function makeBotPersonality() {
   return {
-    looseness: randRange(0, 1), // higher = plays more hands / calls wider
-    aggression: randRange(0, 1), // higher = prefers bet/raise over check/call
-    bluffFreq: randRange(0, 0.35), // chance to bluff-raise a hand the strategy engine would fold
+    // Sampled from a floor of 0.25 rather than 0: a table of 6 strict-basic-
+    // strategy bots folds almost everything preflop and rarely sees a flop,
+    // let alone a showdown. Recreational live tables run looser than that,
+    // and this trainer wants multi-way pots to actually play out (see the
+    // limp/call-anyway logic below) rather than ending in a walk-over.
+    looseness: randRange(0.25, 1), // higher = plays more hands / calls wider
+    aggression: randRange(0, 1),   // higher = prefers bet/raise over check/call
+    bluffFreq: randRange(0, 0.3),  // chance to bluff-raise a hand the strategy engine would fold
   };
 }
 
@@ -43,9 +48,22 @@ function decidePreflop(ctx, personality) {
 
   let action = advice.action;
 
-  // Occasional bluff: raise a hand the engine would otherwise fold.
-  if (action === 'fold' && numRaisesInFront === 0 && Math.random() < personality.bluffFreq * 0.4) {
-    action = 'raise';
+  if (numRaisesInFront === 0) {
+    // Unopened pot: occasionally bluff-raise, otherwise limp along instead
+    // of mucking outright -- a purely tight-fold-only table never builds a
+    // multi-way pot, and limping a speculative hand for one bet is exactly
+    // how loose-passive recreational tables actually play.
+    if (action === 'fold' && Math.random() < personality.bluffFreq * 0.4) {
+      action = 'raise';
+    } else if (action === 'fold' && !canCheck) {
+      const limpChance = 0.25 + personality.looseness * 0.45;
+      if (Math.random() < limpChance) action = 'call';
+    }
+  } else if (action === 'fold') {
+    // Facing a raise: call anyway often enough that raised pots stay
+    // multi-way instead of folding around to the raiser every time.
+    const callChance = 0.22 + personality.looseness * 0.55;
+    if (Math.random() < callChance) action = 'call';
   }
   // Aggressive bots upgrade some calls into raises (a light 3-bet/squeeze).
   if (action === 'call' && Math.random() < personality.aggression * 0.3) {
@@ -68,8 +86,12 @@ function decidePostflop(ctx, personality) {
   const advice = postflopAdvice({ holeCards, board, pot, toCall });
   let action = advice.action;
 
-  if ((action === 'fold') && toCall > 0 && Math.random() < personality.looseness * 0.25 && toCall <= pot * 0.6) {
-    action = 'call'; // loose/curious call
+  // Loose call-down: a floor probability (not just a looseness-scaled one)
+  // so hands regularly see later streets instead of folding to the first
+  // bet, up to a bet size where calling anyway stops being plausible.
+  if (action === 'fold' && toCall > 0 && toCall <= pot * 1.3) {
+    const callChance = 0.3 + personality.looseness * 0.55;
+    if (Math.random() < callChance) action = 'call';
   }
   if (action === 'call' && Math.random() < personality.aggression * 0.3) {
     action = 'raise';
