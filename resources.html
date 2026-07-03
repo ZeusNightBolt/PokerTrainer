@@ -1,4 +1,6 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0e14">
 <title>Texas Hold'em Trainer — Reference</title>
 <link rel="stylesheet" href="css/style.css">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%230f5638%22 stroke=%22%23e7c45a%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22%23e7c45a%22%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
@@ -81,8 +83,10 @@
       (likely) the best hand: 9 for a flush draw, 8 for an open-ended straight draw, 4 for a
       gutshot, 2 for a set-completing pocket pair, and so on.</li>
     <li><strong>Convert outs to equity</strong> with the Rule of 4-and-2: multiply your outs by
-      4 in the flop-to-river estimate, deducting 1 point for every 2 outs beyond 8 (the
-      overestimate correction for big combo draws), or by 2 for a single street.</li>
+      4 in the flop-to-river estimate (for draws bigger than 8 outs, subtract the excess --
+      outs × 4 − (outs − 8) -- since the plain rule overstates big combo draws), or multiply
+      by 2 with one card to come. This tracks the exact probability within about a point:
+      a 9-out flush draw is 35% vs. a true 35.0%, a 15-out monster draw is 53% vs. 54.1%.</li>
     <li><strong>Compare equity to pot odds</strong>: pot odds are
       <code>amountToCall ÷ (pot + amountToCall)</code>. If your equity beats the pot odds
       percentage, calling is profitable in isolation; if not, it's a fold unless implied odds
