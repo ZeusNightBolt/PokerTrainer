@@ -27,6 +27,12 @@ The site has three pages:
   so hands actually play out multi-way -- most showdowns see 3-4+ players to the river instead
   of folding around to one raiser, which is what a strict "always fold the -EV hand" table would
   otherwise produce almost every time.
+- **Paced action**: bots act one at a time with floating action bubbles ("Calls $6", "Raises to
+  $20"), and new streets pause briefly, so every hand visibly plays out around the table. A
+  speed toggle in the action dock cycles 1× / 2× / instant (persisted).
+- **Mobile-first play**: on phones the table flips to a portrait oval with seats redistributed
+  around it, and the action dock sticks to the thumb zone with full-size touch targets. All
+  three pages are responsive with proper viewport handling.
 - **Live Coach**: every decision is graded against a Chen-Formula preflop chart
   (position-adjusted) and an outs/pot-odds postflop advisor -- it shows the recommended action
   with a plain-English reason, then marks your actual choice ✓ matched / ✗ deviated. A running

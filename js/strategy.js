@@ -131,12 +131,14 @@ function countOuts(holeCards, board) {
   return { outs, cardsToCome: board.length === 3 ? 2 : 1 };
 }
 
-/* Rule of 4 and 2, with the standard "-1 per 2 extra outs above 8"
-   correction for the two-cards-to-come case (the rule overstates equity
-   for big combo draws otherwise). */
+/* Rule of 4 and 2, with the standard correction for big draws on the
+   flop: above 8 outs, subtract (outs - 8) from the times-4 estimate,
+   since the plain rule overstates equity for combo draws. This tracks
+   true two-card equity closely (e.g. 12 outs: 48-4=44 vs. true ~45%;
+   15 outs: 60-7=53 vs. true ~54%). */
 function equityFromOuts(outs, cardsToCome) {
   if (cardsToCome === 2) {
-    let equity = outs <= 8 ? outs * 4 : 32 + (outs - 8) * 2;
+    const equity = outs <= 8 ? outs * 4 : outs * 4 - (outs - 8);
     return Math.min(equity, 96);
   }
   return Math.min(outs * 2, 100);

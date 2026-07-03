@@ -9,6 +9,27 @@
 
   const el = (id) => document.getElementById(id);
   const ACTION_LABEL = { fold: 'Fold', check: 'Check', call: 'Call', bet: 'Bet', raise: 'Raise', allin: 'All-In' };
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+  /* ---- action pacing ---- */
+  // Bot actions play out on a delay so the hand visibly goes around the
+  // table instead of resolving in a single repaint. stepToken invalidates
+  // any in-flight pacing loop when a new hand is dealt.
+  let stepToken = 0;
+  const SPEEDS = [
+    { label: '1×', bot: 520, street: 800 },
+    { label: '2×', bot: 240, street: 400 },
+    { label: '⚡', bot: 0, street: 0 },
+  ];
+  let speedIdx = Number(localStorage.getItem('pokertrainer.speed'));
+  if (!Number.isInteger(speedIdx) || speedIdx < 0 || speedIdx >= SPEEDS.length) speedIdx = 0;
+
+  /* transient per-seat action bubbles ("Calls $6"), drawn by render() while fresh */
+  const BUBBLE_TTL = 1500;
+  let bubbles = {}; // seat -> { label, cls, ts }
+  function setBubble(seat, cls, label) {
+    bubbles[seat] = { label, cls, ts: Date.now() };
+  }
 
   /* ---------------- Setup ---------------- */
 
@@ -59,14 +80,47 @@
     preHandHumanStack = game.seats[HUMAN_SEAT].stack + game.seats[HUMAN_SEAT].committedHand;
     pendingAdvice = null;
     lastDecision = null;
+    bubbles = {};
     advance();
   }
 
-  function advance() {
-    const status = game.runBotsUntilHumanOrDone();
+  /* Paced game loop: bots act one at a time with a visible delay and an
+     action bubble; new streets pause briefly so the runout reads naturally. */
+  async function advance() {
+    const token = ++stepToken;
     render();
-    if (status.handOver) finishHand();
-    else setupTurn();
+    while (!game.lastResult) {
+      const seat = game.currentActorSeat();
+      if (seat === null) { game.advanceStreet(); render(); continue; }
+      if (seat === HUMAN_SEAT) { setupTurn(); return; }
+
+      const { bot: botDelay, street: streetDelay } = SPEEDS[speedIdx];
+      if (botDelay) await sleep(botDelay);
+      if (token !== stepToken) return; // a new hand superseded this loop
+
+      const legal = game.legalActionsFor(seat);
+      const beforeStreet = game.street;
+      const d = game.decideBot(seat);
+      game.act(seat, d.action, d.amount);
+
+      const s = game.seats[seat];
+      const bubbleLabel =
+        d.action === 'fold' ? 'Folds' :
+        d.action === 'check' ? 'Checks' :
+        d.action === 'call' ? `Calls $${legal.callAmount}` :
+        s.allIn ? `All-in $${s.committedRound}` :
+        d.action === 'bet' ? `Bets $${s.committedRound}` : `Raises to $${s.committedRound}`;
+      setBubble(seat, s.allIn && d.action !== 'fold' ? 'allin' : d.action, bubbleLabel);
+      render();
+
+      if (!game.lastResult && game.street !== beforeStreet && streetDelay) {
+        await sleep(streetDelay);
+        if (token !== stepToken) return;
+        render();
+      }
+    }
+    render();
+    finishHand();
   }
 
   function finishHand() {
@@ -166,6 +220,8 @@
   }
 
   function submitHumanAction(action, amount) {
+    // Hide the dock before anything async runs so a double-tap can't act twice.
+    el('action-dock').style.display = 'none';
     if (pendingAdvice) {
       const rec = pendingAdvice.advice.action;
       const matched = action === rec ||
@@ -179,7 +235,16 @@
       stats = recordDecision(stats, { street: pendingAdvice.street, matched });
       renderStats();
     }
+    const legal = game.legalActionsFor(HUMAN_SEAT);
     game.act(HUMAN_SEAT, action, amount);
+    const s = game.seats[HUMAN_SEAT];
+    const bubbleLabel =
+      action === 'fold' ? 'Folds' :
+      action === 'check' ? 'Checks' :
+      action === 'call' ? `Calls $${legal.callAmount}` :
+      s.allIn ? `All-in $${s.committedRound}` :
+      action === 'bet' ? `Bets $${s.committedRound}` : `Raises to $${s.committedRound}`;
+    setBubble(HUMAN_SEAT, s.allIn && action !== 'fold' ? 'allin' : action, bubbleLabel);
     advance();
   }
 
@@ -279,9 +344,13 @@
         ? s.holeCards.map((c) => cardFaceHTML(c, { small: true })).join('')
         : (s.folded ? '' : cardBackHTML(true) + cardBackHTML(true));
       const avatarIco = s.isHuman ? '🧑' : '🤖';
+      const b = bubbles[s.seat];
+      const bubbleHtml = (b && Date.now() - b.ts < BUBBLE_TTL && !state.lastResult)
+        ? `<div class="action-bubble ${b.cls}">${b.label}</div>` : '';
       div.innerHTML =
         (state.buttonSeat === s.seat ? '<div class="dealer-chip">D</div>' : '') +
         `<div class="seat-inner">` +
+        bubbleHtml +
         `<div class="avatar">${avatarIco}</div>` +
         `<div class="seat-name">${s.name}</div>` +
         `<div class="seat-role">${state.roles[s.seat] || ''}</div>` +
@@ -321,7 +390,14 @@
 
   el('reset-stats-btn').addEventListener('click', () => { stats = resetStats(); renderStats(); });
 
+  el('speed-btn').addEventListener('click', () => {
+    speedIdx = (speedIdx + 1) % SPEEDS.length;
+    try { localStorage.setItem('pokertrainer.speed', speedIdx); } catch (e) { /* private mode */ }
+    el('speed-btn').textContent = SPEEDS[speedIdx].label;
+  });
+
   /* ---------------- Init ---------------- */
+  el('speed-btn').textContent = SPEEDS[speedIdx].label;
   populateStakes();
   renderStats();
 })();
