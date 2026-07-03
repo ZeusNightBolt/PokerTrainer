@@ -27,6 +27,7 @@
     <a href="#postflop">Postflop: outs &amp; pot odds</a>
     <a href="#casino-rules">Casino rules</a>
     <a href="#counting">Card-counting theory</a>
+    <a href="#variance">Variance: luck vs. skill</a>
     <a href="#further">Further reading</a>
   </div>
 
@@ -185,6 +186,43 @@
   <p class="sources">Card-counting-in-poker background drawn from PokerCoaching.com's
     "Counting Cards in Poker Is Different," casino.org's "Can You Count Cards in Poker?",
     and PokerNews' "Counting Cards in Poker" strategy explainer.</p>
+
+  <h2 id="variance">Variance: Separating Luck from Skill</h2>
+  <p>Poker is a game of incomplete information played over a huge number of hands, and any single
+    session -- even a single hand -- mixes two things together: the <em>decisions</em> you made
+    and the <em>luck</em> of which cards actually came off the deck. A skilled player can play a
+    hand perfectly and still lose it, and a bad player can misplay a hand into a lucky win. Over
+    a long enough sample the skill component dominates, but short-term results are noisy, and it
+    is easy to draw the wrong lesson from a single session ("I lost, so I must have played badly"
+    or "I won, so that call was good") if you don't separate the two.</p>
+  <p>The standard way serious players and tracking software separate them is by comparing what you
+    <em>actually</em> won in a pot to what your equity <em>entitled</em> you to on average. If you
+    get all-in with two hands, your two-card holdings have a fixed win probability against the
+    other hand(s) before any more cards fall -- that's your equity. Multiply your equity by the
+    pot and you get your "expected" share; what you actually won, minus that expected share, is
+    the variance for that pot. Add it up across many pots and you get a running picture of whether
+    you've been running hot, running cold, or right about at your expected value.</p>
+  <table>
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td>Equity</td><td>Your hand's win probability against the hand(s) it's up against, averaged over every possible way the remaining board cards could fall.</td></tr>
+      <tr><td>EV (expected value)</td><td>Equity × pot size -- what you'd win from this exact spot on average if it were played out an infinite number of times.</td></tr>
+      <tr><td>Variance / luck delta</td><td>Actual amount won − EV. Positive: you ran better than your cards' average outcome. Negative: you ran worse.</td></tr>
+    </tbody>
+  </table>
+  <p class="callout accent">This trainer computes exactly this. At every showdown, it takes the
+    hole cards of everyone still in the pot and runs a Monte Carlo simulation -- sampling
+    hundreds of random 5-card boards from the remaining deck and tallying how often each hand
+    would have won -- to estimate each player's <strong>preflop equity</strong> in that pot. It
+    then compares that equity's dollar share of the pot to what you actually won. The <strong>Session</strong>
+    panel on the Play page keeps a running total of this "variance" across every showdown you've
+    been part of: positive means variance has helped you overall, negative means it's cost you,
+    and it's shown separately from your straightforward win/loss total so you can tell the two
+    apart. A single hand's breakdown also appears on the result banner right after any showdown.</p>
+  <p>None of this changes what the "correct" play was -- the Coach's recommendations are still
+    based on the same Chen-formula and pot-odds logic regardless of how a given hand's cards
+    happened to fall. Variance tracking is a separate lens: it answers "how much of my result
+    this session is luck?", not "did I make the right decision?".</p>
 
   <h2 id="further">Further Reading</h2>
   <ul>

@@ -120,6 +120,11 @@
       <div class="panel">
         <h3><span class="ico">📊</span> Session</h3>
         <div class="metrics" id="stats-content"></div>
+        <div style="font-size:0.76rem;color:var(--text-dim);margin-top:0.6rem;line-height:1.5;">
+          <strong>Variance</strong> compares what you actually won at showdown to what your
+          hole cards' preflop equity "should" have won on average -- positive means you've run
+          hot, negative means you've run cold. See <a href="resources.html#counting">Reference</a>.
+        </div>
         <button class="btn ghost" id="reset-stats-btn" style="margin-top:0.7rem;width:100%;font-size:0.82rem;padding:0.4rem;">Reset stats</button>
       </div>
       <div class="panel">
@@ -137,6 +142,7 @@
 <script src="js/cards.js"></script>
 <script src="js/rules.js"></script>
 <script src="js/strategy.js"></script>
+<script src="js/equity.js"></script>
 <script src="js/bots.js"></script>
 <script src="js/game.js"></script>
 <script src="js/stats.js"></script>

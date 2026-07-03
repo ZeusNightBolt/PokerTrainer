@@ -22,6 +22,12 @@ function defaultStats() {
     preflopMatched: 0,
     postflopDecisions: 0,
     postflopMatched: 0,
+    // Variance/luck tracking: sum of (actual chips won - preflop-equity-expected
+    // chips won) across every showdown the human has been part of. Positive
+    // means you've won more than your cards were "entitled to" on average
+    // (variance has helped); negative means the opposite (variance has hurt).
+    showdownsSeen: 0,
+    luckTotal: 0,
   };
 }
 
@@ -60,7 +66,14 @@ function recordHandResult(stats, netDelta) {
   return stats;
 }
 
-const STATS_EXPORTS = { loadStats, saveStats, resetStats, recordDecision, recordHandResult };
+function recordVariance(stats, luckDelta) {
+  stats.showdownsSeen++;
+  stats.luckTotal += luckDelta;
+  saveStats(stats);
+  return stats;
+}
+
+const STATS_EXPORTS = { loadStats, saveStats, resetStats, recordDecision, recordHandResult, recordVariance };
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = STATS_EXPORTS;

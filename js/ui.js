@@ -83,10 +83,23 @@
       const mark = lastDecision.matched ? '✓ matched basic strategy' : `✗ deviated (rec: ${lastDecision.recLabel})`;
       coachTail = `<div class="detail">Last decision: <strong style="color:${lastDecision.matched ? 'var(--good)' : 'var(--bad)'}">${mark}</strong></div>`;
     }
+
+    let varianceTail = '';
+    const v = r.showdown && r.variance ? r.variance[HUMAN_SEAT] : null;
+    if (v) {
+      stats = recordVariance(stats, v.luckDelta);
+      const luckCls = v.luckDelta > 0 ? 'net-up' : v.luckDelta < 0 ? 'net-down' : '';
+      const luckStr = v.luckDelta > 0 ? `+$${Math.round(v.luckDelta)}` : v.luckDelta < 0 ? `-$${Math.abs(Math.round(v.luckDelta))}` : '$0';
+      const verdict = v.luckDelta > 1 ? 'Variance helped you here' : v.luckDelta < -1 ? 'Variance hurt you here' : 'Ran about even with your equity';
+      varianceTail =
+        `<div class="detail">Preflop equity ${Math.round(v.equityPct * 100)}% → expected $${Math.round(v.evAmount)},` +
+        ` actually won $${Math.round(v.actualAmount)}. <strong class="${luckCls}">${verdict} (${luckStr})</strong></div>`;
+    }
+
     el('hand-result').style.display = 'block';
     el('hand-result').innerHTML =
       `<div class="headline">Hand #${game.handNumber} · <span class="${netCls}">${netStr}</span></div>` +
-      `<div class="detail">${summary}</div>${coachTail}` +
+      `<div class="detail">${summary}</div>${coachTail}${varianceTail}` +
       `<button class="btn gold" id="next-hand-btn">Deal Next Hand ▸</button>`;
     el('next-hand-btn').addEventListener('click', dealNextHand);
     stats = recordHandResult(stats, net);
@@ -290,13 +303,20 @@
     const overall = pct(stats.decisionsMatched, stats.decisionsTracked);
     const net = Math.round(stats.netWon);
     const netCls = net > 0 ? 'good' : net < 0 ? 'bad' : '';
+    const luck = Math.round(stats.luckTotal || 0);
+    const luckCls = luck > 0 ? 'good' : luck < 0 ? 'bad' : '';
+    const luckRow = stats.showdownsSeen
+      ? `<span class="k">Variance (${stats.showdownsSeen} showdown${stats.showdownsSeen === 1 ? '' : 's'})</span>` +
+        `<span class="v ${luckCls}">${luck >= 0 ? '+' : '-'}$${Math.abs(luck)}</span>`
+      : `<span class="k">Variance</span><span class="v">— (no showdowns yet)</span>`;
     el('stats-content').innerHTML =
       `<span class="k">Hands played</span><span class="v">${stats.handsPlayed}</span>` +
       `<span class="k">Net result</span><span class="v ${netCls}">${net >= 0 ? '+' : '-'}$${Math.abs(net)}</span>` +
       `<span class="k">Strategy match</span><span class="v gold">${overall}%</span>` +
       `<div class="meter"><span style="width:${overall}%"></span></div>` +
       `<span class="k">Preflop</span><span class="v">${pct(stats.preflopMatched, stats.preflopDecisions)}%</span>` +
-      `<span class="k">Postflop</span><span class="v">${pct(stats.postflopMatched, stats.postflopDecisions)}%</span>`;
+      `<span class="k">Postflop</span><span class="v">${pct(stats.postflopMatched, stats.postflopDecisions)}%</span>` +
+      luckRow;
   }
 
   el('reset-stats-btn').addEventListener('click', () => { stats = resetStats(); renderStats(); });

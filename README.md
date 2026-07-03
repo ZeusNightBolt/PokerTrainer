@@ -22,7 +22,11 @@ The site has three pages:
 
 ### Play (`index.html`)
 - **7-handed felt table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per hand,
-  with dealt-card animations, chip/bet visuals, dealer button, and winner highlighting.
+  with dealt-card animations, chip/bet visuals, dealer button, and winner highlighting. Bots are
+  tuned loose-passive (limp/call-anyway probabilities on top of their strategy-engine baseline)
+  so hands actually play out multi-way -- most showdowns see 3-4+ players to the river instead
+  of folding around to one raiser, which is what a strict "always fold the -EV hand" table would
+  otherwise produce almost every time.
 - **Live Coach**: every decision is graded against a Chen-Formula preflop chart
   (position-adjusted) and an outs/pot-odds postflop advisor -- it shows the recommended action
   with a plain-English reason, then marks your actual choice ✓ matched / ✗ deviated. A running
@@ -30,6 +34,11 @@ The site has three pages:
   across sessions. Coaching can be toggled off for unassisted play.
 - **Outs & Equity panel**: live outs, Rule-of-4-and-2 equity (with a meter), and the pot odds
   you're being laid.
+- **Variance / luck tracker**: at every showdown, a Monte Carlo simulation (`js/equity.js`)
+  estimates each player's preflop hole-card equity and compares it to what they actually won --
+  the same "actual vs. all-in EV" idea used by real poker tracking software. The result banner
+  shows it per hand, and the Session panel keeps a running total, so you can see whether
+  variance has been helping or hurting independent of whether your decisions were sound.
 - **Real casino rules**: pick Borgata (Atlantic City) or Parx (Bensalem/Philadelphia) and a
   posted stake -- blinds, buy-in range, and rake/time-charge all match that room's real
   structure.
@@ -57,9 +66,10 @@ css/style.css        Shared design system for all three pages
 js/cards.js          Card/Deck classes + best-5-of-7 hand evaluator
 js/rules.js          Borgata/Parx stake, buy-in, and rake configuration
 js/strategy.js       Chen Formula preflop scoring + outs/pot-odds postflop advisor
-js/bots.js           6 randomized bot personalities built on the strategy engine
-js/game.js           Betting-round state machine, side pots, showdown, rake
-js/stats.js          localStorage-backed session/adherence stats
+js/equity.js         Monte Carlo preflop equity estimator (variance/luck tracker)
+js/bots.js           6 loose-passive-tuned bot personalities built on the strategy engine
+js/game.js           Betting-round state machine, side pots, showdown, rake, variance calc
+js/stats.js          localStorage-backed session/adherence/variance stats
 js/render.js         Shared card-face rendering (game + learn widgets)
 js/ui.js             Game-table DOM rendering and event wiring
 js/learn.js          Learn-page interactive widgets
