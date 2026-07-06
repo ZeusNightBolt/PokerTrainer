@@ -27,6 +27,12 @@ function makeBotPersonality() {
     looseness: randRange(0.25, 1), // higher = plays more hands / calls wider
     aggression: randRange(0, 1),   // higher = prefers bet/raise over check/call
     bluffFreq: randRange(0, 0.3),  // chance to bluff-raise a hand the strategy engine would fold
+    // Skill in [0.4, 0.8]: a spread from medium to hard, averaging
+    // "medium-hard". Lower skill => more frequent human-like mistakes
+    // (missed value, over-folds to big bets, softer sizing) and less
+    // relentless aggression, so the table is a natural, beatable mix
+    // rather than six always-correct pros drilling the player.
+    skill: randRange(0.4, 0.8),
   };
 }
 
@@ -65,8 +71,10 @@ function decidePreflop(ctx, personality) {
     const callChance = 0.22 + personality.looseness * 0.55;
     if (Math.random() < callChance) action = 'call';
   }
-  // Aggressive bots upgrade some calls into raises (a light 3-bet/squeeze).
-  if (action === 'call' && Math.random() < personality.aggression * 0.3) {
+  // Aggressive bots upgrade some calls into raises (a light 3-bet/squeeze),
+  // but only in proportion to skill -- a low-skill bot 3-bets light far less
+  // often, so it plays more straightforwardly and predictably.
+  if (action === 'call' && Math.random() < personality.aggression * 0.3 * personality.skill) {
     action = 'raise';
   }
 
@@ -85,6 +93,15 @@ function decidePostflop(ctx, personality) {
   const { holeCards, board, pot, toCall, minRaiseTo, maxRaiseTo, canCheck } = ctx;
   const advice = postflopAdvice({ holeCards, board, pot, toCall });
   let action = advice.action;
+  const err = 1 - personality.skill; // 0 (hard) .. 0.6 (medium) mistake weight
+
+  // Missed value: a less-skilled bot doesn't always bet/raise its strong
+  // hands -- it passively checks or flat-calls instead, letting the player
+  // see cheaper cards and cheaper showdowns. This is the single biggest
+  // thing that turns an always-correct grinder into a beatable opponent.
+  if ((action === 'bet' || action === 'raise') && Math.random() < err * 0.45) {
+    action = toCall > 0 ? 'call' : 'check';
+  }
 
   // Loose call-down: a floor probability (not just a looseness-scaled one)
   // so hands regularly see later streets instead of folding to the first
@@ -93,10 +110,19 @@ function decidePostflop(ctx, personality) {
     const callChance = 0.3 + personality.looseness * 0.55;
     if (Math.random() < callChance) action = 'call';
   }
-  if (action === 'call' && Math.random() < personality.aggression * 0.3) {
+
+  // Over-fold to pressure: facing a big bet, a less-skilled bot sometimes
+  // lays down a hand it could have called -- which is exactly what makes
+  // the player's own bluffs and semi-bluffs profitable.
+  if (action === 'call' && toCall > pot * 0.7 && Math.random() < err * 0.4) {
+    action = canCheck ? 'check' : 'fold';
+  }
+
+  // Aggression upgrades, scaled by skill so weaker bots stay more passive.
+  if (action === 'call' && Math.random() < personality.aggression * 0.3 * personality.skill) {
     action = 'raise';
   }
-  if (action === 'check' && Math.random() < personality.aggression * 0.3) {
+  if (action === 'check' && Math.random() < personality.aggression * 0.3 * personality.skill) {
     action = 'bet';
   }
   if (action === 'fold' && canCheck) action = 'check';
@@ -105,7 +131,9 @@ function decidePostflop(ctx, personality) {
   if (action === 'fold') return { action: 'fold' };
   if (action === 'call') return { action: 'call' };
   if (action === 'bet' || action === 'raise') {
-    const fraction = randRange(0.5, 1.0) * (0.6 + personality.aggression * 0.6);
+    // Weaker players size less aggressively (smaller bets, more often the
+    // "min-ish" side), stronger players size closer to pot.
+    const fraction = randRange(0.5, 1.0) * (0.55 + personality.aggression * 0.55) * (0.7 + personality.skill * 0.5);
     const target = toCall > 0 ? toCall + pot * fraction : pot * fraction;
     return { action: toCall > 0 ? 'raise' : 'bet', amount: sizeTo(target + toCall, minRaiseTo, maxRaiseTo) };
   }
