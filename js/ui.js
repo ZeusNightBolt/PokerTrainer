@@ -11,6 +11,15 @@
   const ACTION_LABEL = { fold: 'Fold', check: 'Check', call: 'Call', bet: 'Bet', raise: 'Raise', allin: 'All-In' };
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
+  // Fun default seat name: a random Dragon Ball / Naruto character.
+  const HERO_NAMES = [
+    'Goku', 'Vegeta', 'Gohan', 'Piccolo', 'Trunks', 'Krillin', 'Frieza', 'Cell',
+    'Beerus', 'Gotenks', 'Broly', 'Roshi', 'Bulma', 'Majin Buu',
+    'Naruto', 'Sasuke', 'Sakura', 'Kakashi', 'Itachi', 'Gaara', 'Hinata',
+    'Jiraiya', 'Rock Lee', 'Shikamaru', 'Madara', 'Minato', 'Tsunade', 'Obito',
+  ];
+  const randomHero = () => HERO_NAMES[Math.floor(Math.random() * HERO_NAMES.length)];
+
   /* ---- action pacing ---- */
   // Bots "think" for a beat before acting so the hand visibly goes around
   // the table like a real game, instead of resolving in a single repaint.
@@ -596,6 +605,12 @@
     try { localStorage.setItem('pokertrainer.speed', speedIdx); } catch (e) { /* private mode */ }
     el('speed-btn').textContent = SPEEDS[speedIdx].label;
   });
+
+  // random hero name (Dragon Ball / Naruto), re-rollable with the 🎲 button
+  const nameInput = el('name-input');
+  if (nameInput) nameInput.value = randomHero();
+  const shuffleBtn = el('name-shuffle');
+  if (shuffleBtn) shuffleBtn.addEventListener('click', () => { if (nameInput) nameInput.value = randomHero(); });
 
   /* ---------------- Init ---------------- */
   el('speed-btn').textContent = SPEEDS[speedIdx].label;

@@ -1,112 +1,103 @@
-# PokerTrainer
+<p align="center">
+  <img src="assets/logo.svg" width="112" height="112" alt="Hold'em Trainer logo">
+</p>
 
-Texas Hold'Em Poker Trainer
+<h1 align="center">♠ Hold'em Trainer</h1>
 
-A browser-based No-Limit Texas Hold'em trainer, in the same spirit as a blackjack basic-strategy
-trainer: play real hands against randomized bot opponents, get a live strategy recommendation
-on every decision, and track how often your play matches basic strategy over a session.
+<p align="center">
+  <b>A browser-based No-Limit Texas Hold'em trainer.</b><br>
+  Play real hands against medium-hard bots, get a live win-odds meter, and let a
+  chatty <b>Genie</b> explain the <i>why</i> behind every recommendation.
+</p>
 
-**Live site: https://zeusnightbolt.github.io/PokerTrainer/**
+<p align="center">
+  <a href="https://zeusnightbolt.github.io/PokerTrainer/"><img src="https://img.shields.io/badge/%F0%9F%8E%B0%20Play%20now-live%20demo-1f7a54?style=for-the-badge" alt="Live demo"></a>
+</p>
 
-## Play
+<p align="center">
+  <a href="https://github.com/ZeusNightBolt/PokerTrainer/actions/workflows/ci.yml"><img src="https://github.com/ZeusNightBolt/PokerTrainer/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/ZeusNightBolt/PokerTrainer/actions/workflows/deploy-pages.yml"><img src="https://github.com/ZeusNightBolt/PokerTrainer/actions/workflows/deploy-pages.yml/badge.svg" alt="Deploy"></a>
+  <img src="https://img.shields.io/badge/build-none-brightgreen" alt="No build step">
+  <img src="https://img.shields.io/badge/deps-0-brightgreen" alt="Zero dependencies">
+  <img src="https://img.shields.io/badge/vanilla-JS%20%2F%20HTML%20%2F%20CSS-f0b429" alt="Vanilla JS">
+</p>
 
-Open the live site above, or run it locally: open `index.html` in a browser (no build step, no
-server required beyond static file hosting -- e.g. `python3 -m http.server` from the repo root,
-then visit `http://localhost:8000`).
+> **▶️ [zeusnightbolt.github.io/PokerTrainer](https://zeusnightbolt.github.io/PokerTrainer/)** — no install, no sign-up, works on your phone.
 
-The site is deployed automatically by `.github/workflows/deploy-pages.yml` on every push to
-`main`, via GitHub Pages with the "GitHub Actions" source (no build step -- the repo root is
-uploaded as-is).
+---
 
-The site has three pages:
+## ✨ Highlights
 
-### Play (`index.html`)
-- **Live-feeling felt table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per
-  hand. The table renders through a persistent-DOM controller (`js/table.js`) that mutates a
-  stable layout in place rather than rebuilding it each action, so everything transitions
-  smoothly: cards are real perspective **3D flips** (dealt face-down, flipped up on reveal),
-  **poker chips physically fly to the pot** when a street closes and back out to the winner,
-  stacks tween, and the "on the clock" seat gets a rotating ring. Rendering is wrapped in a
-  guard so a hiccup surfaces a recovery button instead of freezing the table.
-- **Medium-hard, natural opponents**: each bot has a randomized skill level (a spread from
-  medium to hard) layered on its loose-passive personality. Lower-skill bots make human-like
-  mistakes -- missed value bets, over-folds to big bets, softer sizing, less light 3-betting --
-  so the table is a beatable, natural mix rather than six always-correct pros drilling you.
-  Hands still play deep and multi-way (most showdowns see 3-4+ players to the river).
-- **Realistic pacing**: bots "think" for a beat before acting (animated dots on the seat that's
-  on the clock), with the pause length fitting the decision -- snap folds are quick, big
-  bets/raises take ~1-2 seconds like a real player -- then act with a floating bubble ("Calls
-  $6", "Raises to $20"). New streets pause briefly so each runout reads naturally. A speed
-  toggle cycles Realistic / Fast / Instant (persisted).
-- **Mobile-first play**: on phones the table flips to a portrait oval with seats redistributed
-  around it, and the action dock sticks to the thumb zone with full-size touch targets. All
-  three pages are responsive with proper viewport handling.
-- **Hand-strength meter** (poker-app style): a live gradient bar and win-% showing your Monte
-  Carlo equity against the opponents *still in the hand*, with a tier label (Weak → Monster).
-  Updates as the board develops (`handStrength()` in `js/equity.js`).
-- **Genie assistant**: a chat-style coach that recommends the play **and explains the reasoning**
-  -- not just the Chen number but *why* it implies that action. Tap follow-up chips ("Break down
-  the score", "Why does position matter?", "Show the pot-odds math", "My win %?") and it walks
-  through the Chen component breakdown, why position loosens the range, the pot-odds arithmetic,
-  and your outs. Your choice is still graded ✓/✗ against the book line, with a running
-  "% matched" stat and net result persisted across sessions. Toggleable for unassisted play.
-- **Outs & Equity panel**: live outs, Rule-of-4-and-2 equity (with a meter), and the pot odds
-  you're being laid.
-- **Variance / luck tracker**: at every showdown, a Monte Carlo simulation (`js/equity.js`)
-  estimates each player's preflop hole-card equity and compares it to what they actually won --
-  the same "actual vs. all-in EV" idea used by real poker tracking software. The result banner
-  shows it per hand, and the Session panel keeps a running total, so you can see whether
-  variance has been helping or hurting independent of whether your decisions were sound.
-- **Real casino rules**: pick Borgata (Atlantic City) or Parx (Bensalem/Philadelphia) and a
-  posted stake -- blinds, buy-in range, and rake/time-charge all match that room's real
-  structure.
+| | |
+|---|---|
+| 🃏 **Live-feeling table** | Persistent-DOM renderer with real 3D card flips, chips that physically fly to the pot, tweened stacks and a rotating "on the clock" ring. |
+| 💪 **Hand-strength meter** | A poker-app-style bar + win-% from a Monte Carlo run against the opponents *still in the hand*, tiered Weak → Monster. |
+| 🧞 **Genie assistant** | A chat coach that recommends the play **and explains the reasoning** — tap follow-ups to see the Chen breakdown, position logic, pot-odds math and your outs. |
+| 🤖 **Medium-hard bots** | Randomized skill levels with human-like mistakes, so the table is beatable and natural — not six pros drilling you. Hands run deep and multi-way. |
+| ⏱️ **Realistic pacing** | Opponents "think" for a beat that fits the decision (quick folds, longer for big bets), with Realistic / Fast / Instant speeds. |
+| 🎲 **Play as your hero** | Your default seat name is a random Dragon Ball / Naruto character — re-roll with the dice button. |
+| 📈 **Variance tracker** | At showdown, compares what you *actually* won to your equity's expectation — luck vs. skill, separated. |
+| 🏦 **Real cardroom rules** | Borgata (AC) and Parx (Philly) blinds, buy-ins and rake/time-charge modeled from posted structures. |
+| 📱 **Mobile-first** | Portrait table, thumb-zone action dock, full-size touch targets, zero horizontal overflow. |
 
-### Learn (`learn.html`) — interactive tools
-- **Starting-hand range chart**: all 169 hands in a 13×13 grid, color-coded by Chen score, with
-  hover/tap details (score, tier, which positions can open-raise it).
-- **Outs & pot-odds calculator**: pick a draw (or set outs), enter the pot and bet, and see your
-  equity, the equity you need, the price the pot lays, and a call/fold verdict.
-- **Preflop quiz**: a random spot every time (your cards, seat, action in front) graded against
-  the Chen-formula baseline, with streak/accuracy scoring.
+## 🚀 Quick start
 
-### Reference (`resources.html`)
-Basic-strategy write-up, sourced Borgata/Parx rule tables, and a card-counting-theory section on
-why blackjack-style counting doesn't carry over to hold'em (fresh shuffle every hand, no shoe to
-track) and what the real poker equivalent is (outs, blockers, range reading).
+```bash
+# it's a static site — just serve the folder
+python3 -m http.server 8000
+# then open http://localhost:8000
+```
 
-## Project structure
+No build, no dependencies, no bundler. Every `js/` file runs unchanged in the browser and under
+Node (that dual mode powers the tests below).
+
+## 🗺️ The three pages
+
+- **♠ Play** (`index.html`) — the felt table, Genie, and strength meter.
+- **🎓 Learn** (`learn.html`) — an interactive 13×13 range chart, an outs/pot-odds calculator, and a preflop quiz.
+- **📚 Reference** (`resources.html`) — basic-strategy write-up, Borgata/Parx rule tables, and a card-counting-theory section on why blackjack-style counting doesn't transfer to hold'em (and what does).
+
+## 🧪 Tests & CI
+
+```bash
+node tests/smoke.js      # 21 assertions, dependency-free
+```
+
+`tests/smoke.js` checks the hand evaluator, Chen formula + breakdown, outs/Rule-of-4, pot odds,
+Monte-Carlo equity + hand-strength against known values, the preflop advisor, and chip
+conservation with **zero exceptions across 3,000 simulated hands**. CI (`.github/workflows/ci.yml`)
+runs it plus a `node --check` syntax pass on every push and PR; merges to `main` auto-deploy to
+GitHub Pages.
+
+## 🧱 Project structure
 
 ```
-index.html           Play — the game table
-learn.html           Learn — interactive range chart, calculator, quiz
-resources.html       Reference — strategy, casino rules, card-counting theory
+assets/logo.svg      Poker-chip + spade logo mark (also the favicon)
+index.html           ♠ Play — the game table
+learn.html           🎓 Learn — range chart, calculator, quiz
+resources.html       📚 Reference — strategy, casino rules, counting theory
 css/style.css        Shared design system for all three pages
+
 js/cards.js          Card/Deck classes + best-5-of-7 hand evaluator
 js/rules.js          Borgata/Parx stake, buy-in, and rake configuration
 js/strategy.js       Chen Formula (+ component breakdown) + outs/pot-odds advisor
 js/equity.js         Monte Carlo equity: preflop variance tracker + live hand-strength
-js/bots.js           6 medium-hard bot personalities (skill/mistake model) on the strategy engine
-js/game.js           Betting-round state machine, side pots, showdown, rake, variance calc
+js/bots.js           6 medium-hard bot personalities (skill/mistake model)
+js/game.js           Betting-round state machine, side pots, showdown, rake, variance
 js/stats.js          localStorage-backed session/adherence/variance stats
-js/render.js         Shared card-face markup (game table + learn widgets)
-js/table.js          Persistent-DOM table renderer (3D card flips, chip flight)
-js/ui.js             Game flow, pacing loop, hand-strength meter, Genie assistant, panels
+js/render.js         Shared card-face markup (table + learn widgets)
+js/table.js          Persistent-DOM table renderer (3D flips, chip flight)
+js/ui.js             Game flow, pacing, strength meter, Genie assistant, panels
 js/learn.js          Learn-page interactive widgets
-tests/smoke.js       Dependency-free assertions (engine, strategy, equity, 3000-hand sim)
-.github/workflows/   ci.yml (syntax-check + smoke tests on every push/PR) + Pages deploy
+
+tests/smoke.js       Dependency-free assertions + 3,000-hand simulation
+.github/workflows/   ci.yml (tests) · deploy-pages.yml (GitHub Pages)
 ```
 
-Each `js/` file works both as a browser `<script>` (falls back to attaching its exports to
-`window`) and under plain Node (`module.exports`). That dual mode powers `tests/smoke.js`, a
-buildless test suite run in CI on every push and pull request (`node tests/smoke.js`) that
-asserts hand-evaluator, Chen-formula, outs/equity, and Monte-Carlo invariants and checks chip
-conservation with zero exceptions across 3,000 simulated hands.
+## ⚠️ Note
 
-## Running the tests
+This is a **training tool for education and practice**, not real-money gambling. Rake and stakes
+figures are representative of the modeled cardrooms as of mid-2026; always confirm posted rules at
+the actual table.
 
-```
-node tests/smoke.js
-```
-
-No dependencies, no build step. CI (`.github/workflows/ci.yml`) runs it plus a `node --check`
-syntax pass on every push to `main` and every pull request.
+<p align="center"><sub>Built with vanilla JS · deployed on GitHub Pages · ♠ ♥ ♦ ♣</sub></p>

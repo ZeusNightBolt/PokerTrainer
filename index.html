@@ -3,10 +3,10 @@
 <meta name="theme-color" content="#0a0e14">
 <title>Texas Hold'em Trainer — Play</title>
 <link rel="stylesheet" href="css/style.css">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ccircle cx=%2250%22 cy=%2250%22 r=%2246%22 fill=%22%230f5638%22 stroke=%22%23e7c45a%22 stroke-width=%228%22/%3E%3Ctext x=%2250%22 y=%2268%22 font-size=%2256%22 text-anchor=%22middle%22 fill=%22%23e7c45a%22%3E%E2%99%A0%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="assets/logo.svg">
 
 <header class="app-header">
-  <div class="brand"><span class="chip-logo"></span><span class="grad">Hold'em Trainer</span></div>
+  <div class="brand"><img class="logo-mark" src="assets/logo.svg" alt="" width="30" height="30"><span class="grad">Hold'em Trainer</span></div>
   <nav>
     <a href="index.html" class="active">Play</a>
     <a href="learn.html">Learn</a>
@@ -40,7 +40,10 @@
       </div>
       <div class="setup-row">
         <label for="name-input">Your name</label>
-        <input id="name-input" type="text" value="You" maxlength="16">
+        <div class="name-row">
+          <input id="name-input" type="text" maxlength="16" placeholder="You">
+          <button type="button" class="btn ghost" id="name-shuffle" title="Random character name">🎲</button>
+        </div>
       </div>
       <div class="setup-row" style="margin-bottom:0;">
         <label style="display:flex;align-items:center;gap:0.5rem;text-transform:none;letter-spacing:0;font-size:0.9rem;cursor:pointer;">

@@ -86,14 +86,13 @@ a { color: var(--accent); }
   font-size: 1.12rem;
   letter-spacing: 0.01em;
 }
-.app-header .brand .chip-logo {
-  width: 30px; height: 30px;
-  border-radius: 50%;
-  background: conic-gradient(var(--gold) 0 25%, #111 0 50%, var(--gold) 0 75%, #111 0);
-  border: 3px solid var(--gold);
-  box-shadow: 0 0 0 2px #111 inset;
-  flex: none;
+.app-header .brand .logo-mark {
+  width: 30px; height: 30px; flex: none;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.55));
 }
+.name-row { display: flex; gap: 0.5rem; }
+.name-row input { flex: 1; }
+.name-row #name-shuffle { flex: none; font-size: 1.1rem; padding: 0 0.8rem; }
 .app-header .brand .grad {
   background: linear-gradient(90deg, var(--gold), #fff 60%, var(--gold));
   -webkit-background-clip: text; background-clip: text;
@@ -1065,7 +1064,7 @@ button, select, input, .range-cell, .outs-chip {
 
   .app-header { padding: 0.55rem 0.8rem; }
   .app-header .brand { font-size: 0.98rem; }
-  .app-header .brand .chip-logo { width: 24px; height: 24px; }
+  .app-header .brand .logo-mark { width: 24px; height: 24px; }
   .app-header nav a { font-size: 0.82rem; padding: 0.34rem 0.62rem; }
 
   .setup-hero h1 { font-size: 1.55rem; }
