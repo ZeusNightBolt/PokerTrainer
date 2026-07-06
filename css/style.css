@@ -783,6 +783,71 @@ input[type=range]::-moz-range-thumb {
 /* ---------- Side panels ---------- */
 .side-col { display: flex; flex-direction: column; gap: 1rem; }
 
+/* ---------- Hand-strength meter ---------- */
+.strength-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 0.5rem; }
+.strength-pct { font-size: 1.7rem; font-weight: 800; font-family: var(--font-num); color: var(--text); line-height: 1; }
+.strength-tier {
+  font-size: 0.74rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 0.16rem 0.55rem; border-radius: 999px; border: 1px solid transparent;
+}
+.strength-tier.monster { color: #ffe9a8; background: rgba(231,196,90,0.16); border-color: rgba(231,196,90,0.4); }
+.strength-tier.strong  { color: #a9e8c0; background: rgba(86,200,119,0.16); border-color: rgba(86,200,119,0.4); }
+.strength-tier.ahead   { color: #bfe0ff; background: rgba(89,183,255,0.16); border-color: rgba(89,183,255,0.4); }
+.strength-tier.marginal{ color: #f0d69a; background: rgba(240,180,41,0.14); border-color: rgba(240,180,41,0.35); }
+.strength-tier.weak    { color: #f2b3ae; background: rgba(240,96,90,0.16); border-color: rgba(240,96,90,0.4); }
+.strength-bar {
+  position: relative; height: 12px; border-radius: 999px; overflow: hidden;
+  background: linear-gradient(90deg, rgba(240,96,90,0.22), rgba(240,180,41,0.22), rgba(86,200,119,0.22));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+}
+.strength-bar > span {
+  display: block; height: 100%; width: 0%; border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.2,0.85,0.25,1), background 0.4s;
+  background: linear-gradient(90deg, #59b7ff, #56c877);
+}
+.strength-bar > span.monster { background: linear-gradient(90deg, #e7c45a, #ffe9a8); }
+.strength-bar > span.strong  { background: linear-gradient(90deg, #2fa863, #56c877); }
+.strength-bar > span.ahead   { background: linear-gradient(90deg, #2c7fc4, #59b7ff); }
+.strength-bar > span.marginal{ background: linear-gradient(90deg, #b9963f, #f0b429); }
+.strength-bar > span.weak    { background: linear-gradient(90deg, #a33, #e5534b); }
+.strength-tick { position: absolute; top: -2px; bottom: -2px; width: 2px; background: rgba(255,255,255,0.35); }
+.strength-sub { font-size: 0.78rem; color: var(--text-dim); margin-top: 0.5rem; line-height: 1.45; }
+
+/* ---------- Genie chat ---------- */
+.genie h3 .genie-sub { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-faint); font-size: 0.7rem; margin-left: 0.3rem; }
+.genie-log { display: flex; flex-direction: column; gap: 0.55rem; max-height: 320px; overflow-y: auto; padding-right: 0.15rem; }
+.g-msg { display: flex; gap: 0.5rem; align-items: flex-start; animation: gIn 0.28s cubic-bezier(0.2,0.9,0.3,1) both; }
+.g-msg.user { justify-content: flex-end; }
+.g-ava {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 0.95rem;
+  background: radial-gradient(circle at 40% 30%, #7c5cff, #3f2b9e);
+  box-shadow: 0 0 12px rgba(124,92,255,0.4);
+}
+.g-bubble {
+  background: var(--panel-solid); border: 1px solid var(--panel-border);
+  border-radius: 12px; border-top-left-radius: 3px;
+  padding: 0.55rem 0.7rem; font-size: 0.86rem; line-height: 1.5; color: var(--text);
+  max-width: 88%;
+}
+.g-bubble b { color: var(--gold); }
+.g-bubble.user {
+  background: linear-gradient(180deg, #2c6fb0, #1c3f66); border-color: rgba(89,183,255,0.4);
+  color: #eaf3ff; border-top-left-radius: 12px; border-top-right-radius: 3px;
+}
+.g-bubble.user b { color: #fff; }
+.genie-actions { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; }
+.g-chip {
+  cursor: pointer; font-size: 0.78rem; font-weight: 600;
+  padding: 0.34rem 0.7rem; border-radius: 999px;
+  color: var(--accent); background: rgba(89,183,255,0.1);
+  border: 1px solid rgba(89,183,255,0.3);
+  transition: background 0.15s, transform 0.08s;
+}
+.g-chip:hover { background: rgba(89,183,255,0.2); }
+.g-chip:active { transform: translateY(1px); }
+@keyframes gIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
 .coach .verdict {
   display: inline-flex; align-items: center; gap: 0.4rem;
   font-weight: 800; font-size: 0.86rem;

@@ -41,11 +41,15 @@ The site has three pages:
 - **Mobile-first play**: on phones the table flips to a portrait oval with seats redistributed
   around it, and the action dock sticks to the thumb zone with full-size touch targets. All
   three pages are responsive with proper viewport handling.
-- **Live Coach**: every decision is graded against a Chen-Formula preflop chart
-  (position-adjusted) and an outs/pot-odds postflop advisor -- it shows the recommended action
-  with a plain-English reason, then marks your actual choice ✓ matched / ✗ deviated. A running
-  "% matched basic strategy" stat (preflop and postflop split out) plus net result persist
-  across sessions. Coaching can be toggled off for unassisted play.
+- **Hand-strength meter** (poker-app style): a live gradient bar and win-% showing your Monte
+  Carlo equity against the opponents *still in the hand*, with a tier label (Weak → Monster).
+  Updates as the board develops (`handStrength()` in `js/equity.js`).
+- **Genie assistant**: a chat-style coach that recommends the play **and explains the reasoning**
+  -- not just the Chen number but *why* it implies that action. Tap follow-up chips ("Break down
+  the score", "Why does position matter?", "Show the pot-odds math", "My win %?") and it walks
+  through the Chen component breakdown, why position loosens the range, the pot-odds arithmetic,
+  and your outs. Your choice is still graded ✓/✗ against the book line, with a running
+  "% matched" stat and net result persisted across sessions. Toggleable for unassisted play.
 - **Outs & Equity panel**: live outs, Rule-of-4-and-2 equity (with a meter), and the pot odds
   you're being laid.
 - **Variance / luck tracker**: at every showdown, a Monte Carlo simulation (`js/equity.js`)
@@ -79,18 +83,30 @@ resources.html       Reference — strategy, casino rules, card-counting theory
 css/style.css        Shared design system for all three pages
 js/cards.js          Card/Deck classes + best-5-of-7 hand evaluator
 js/rules.js          Borgata/Parx stake, buy-in, and rake configuration
-js/strategy.js       Chen Formula preflop scoring + outs/pot-odds postflop advisor
-js/equity.js         Monte Carlo preflop equity estimator (variance/luck tracker)
+js/strategy.js       Chen Formula (+ component breakdown) + outs/pot-odds advisor
+js/equity.js         Monte Carlo equity: preflop variance tracker + live hand-strength
 js/bots.js           6 medium-hard bot personalities (skill/mistake model) on the strategy engine
 js/game.js           Betting-round state machine, side pots, showdown, rake, variance calc
 js/stats.js          localStorage-backed session/adherence/variance stats
 js/render.js         Shared card-face markup (game table + learn widgets)
 js/table.js          Persistent-DOM table renderer (3D card flips, chip flight)
-js/ui.js             Game flow, pacing loop, coach/outs/stats panels, event wiring
+js/ui.js             Game flow, pacing loop, hand-strength meter, Genie assistant, panels
 js/learn.js          Learn-page interactive widgets
+tests/smoke.js       Dependency-free assertions (engine, strategy, equity, 3000-hand sim)
+.github/workflows/   ci.yml (syntax-check + smoke tests on every push/PR) + Pages deploy
 ```
 
 Each `js/` file works both as a browser `<script>` (falls back to attaching its exports to
-`window`) and under plain Node (`module.exports`), which is how the engine was unit- and
-simulation-tested during development (chip-conservation checked across tens of thousands of
-simulated hands across every modeled stake).
+`window`) and under plain Node (`module.exports`). That dual mode powers `tests/smoke.js`, a
+buildless test suite run in CI on every push and pull request (`node tests/smoke.js`) that
+asserts hand-evaluator, Chen-formula, outs/equity, and Monte-Carlo invariants and checks chip
+conservation with zero exceptions across 3,000 simulated hands.
+
+## Running the tests
+
+```
+node tests/smoke.js
+```
+
+No dependencies, no build step. CI (`.github/workflows/ci.yml`) runs it plus a `node --check`
+syntax pass on every push to `main` and every pull request.

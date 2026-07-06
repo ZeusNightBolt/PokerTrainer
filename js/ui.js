@@ -74,7 +74,7 @@
   el('start-btn').addEventListener('click', () => {
     try {
       coachEnabled = el('coach-toggle').checked;
-      el('coach-panel').style.display = coachEnabled ? '' : 'none';
+      el('genie-panel').style.display = coachEnabled ? '' : 'none';
       game = new PokerGame(el('venue-select').value, el('stake-select').value, el('name-input').value.trim() || 'You');
       el('setup-screen').style.display = 'none';
       el('game-screen').style.display = 'grid';
@@ -106,6 +106,7 @@
     lastDecision = null;
     bubbles = {};
     thinkingSeat = null;
+    try { resetStrength(); if (coachEnabled) { genieReset(); genieSay('New hand dealt. I\'ll weigh in when it\'s your move. 🪄'); } } catch (e) { console.error(e); }
     try { Table.startHand(game.getPublicState()); } catch (e) { console.error(e); }
     advance();
   }
@@ -209,7 +210,7 @@
     el('next-hand-btn').addEventListener('click', dealNextHand);
     stats = recordHandResult(stats, net);
     renderStats();
-    renderCoachIdle();
+    genieWrapUp(net, r);
   }
 
   /* ---------------- Human turn ---------------- */
@@ -226,7 +227,8 @@
       : postflopAdvice({ holeCards: human.holeCards, board: game.board, pot, toCall: legal.callAmount });
     pendingAdvice = { street: game.street, advice };
 
-    renderCoach(advice);
+    renderStrength(human, legal, pot);
+    genieAdvise(advice, human, legal, pot);
     renderOuts(human, legal, pot);
     renderActionDock(advice, legal, pot);
   }
@@ -300,34 +302,205 @@
     advance();
   }
 
-  /* ---------------- Coach panel ---------------- */
+  /* ---------------- Hand-strength meter ---------------- */
 
-  function renderCoach(advice) {
-    if (!coachEnabled) return;
-    const recLabel = ACTION_LABEL[advice.action] || advice.action;
-    let fb = '';
-    if (lastDecision) {
-      const cls = lastDecision.matched ? 'good' : 'bad';
-      const txt = lastDecision.matched
-        ? `Last: ${lastDecision.chosenLabel} ✓`
-        : `Last: ${lastDecision.chosenLabel} ✗ (rec ${lastDecision.recLabel})`;
-      fb = `<div class="feedback"><span class="verdict ${cls}">${txt}</span></div>`;
-    }
-    el('coach-content').innerHTML =
-      `<span class="verdict rec">Recommend: ${recLabel}</span>` +
-      `<div class="reason">${advice.reason}</div>${fb}`;
+  function opponentsInHand() {
+    // players still live besides the human
+    return Math.max(1, game.playersInHand().filter((s) => s.seat !== HUMAN_SEAT).length);
   }
 
-  function renderCoachIdle() {
+  function strengthTier(pct) {
+    if (pct >= 0.80) return { name: 'Monster', cls: 'monster' };
+    if (pct >= 0.62) return { name: 'Strong', cls: 'strong' };
+    if (pct >= 0.45) return { name: 'Ahead', cls: 'ahead' };
+    if (pct >= 0.30) return { name: 'Marginal', cls: 'marginal' };
+    return { name: 'Weak', cls: 'weak' };
+  }
+
+  let lastStrength = null; // cached for the genie's "win%" follow-up
+
+  function renderStrength(human, legal, pot) {
+    const opps = opponentsInHand();
+    let s;
+    try {
+      s = handStrength(human.holeCards, game.board, opps, 320);
+    } catch (e) { console.error(e); return; }
+    lastStrength = { pct: s.equity, opps };
+    const pct = Math.round(s.equity * 100);
+    const tier = strengthTier(s.equity);
+    el('strength-pct').textContent = `${pct}%`;
+    const tierEl = el('strength-tier');
+    tierEl.textContent = tier.name;
+    tierEl.className = `strength-tier ${tier.cls}`;
+    const fill = el('strength-fill');
+    fill.style.width = `${pct}%`;
+    fill.className = tier.cls;
+    const made = game.board.length >= 3 ? describeScore(evaluateBest([...human.holeCards, ...game.board]).score) : holeLabel(human.holeCards);
+    el('strength-sub').textContent = `${made} — win odds vs ${opps} opponent${opps === 1 ? '' : 's'} still in the hand`;
+  }
+
+  function resetStrength() {
+    lastStrength = null;
+    el('strength-pct').textContent = '—';
+    el('strength-tier').textContent = '';
+    el('strength-tier').className = 'strength-tier';
+    el('strength-fill').style.width = '0%';
+    el('strength-sub').textContent = 'Dealing…';
+  }
+
+  /* ---------------- Genie assistant (explains the WHY) ---------------- */
+
+  const POS_NAME = { UTG: 'under the gun', UTG1: 'UTG+1', HJ: 'the hijack', CO: 'the cutoff', BTN: 'the button', SB: 'the small blind', BB: 'the big blind' };
+  const POS_WHY = {
+    UTG: 'you act first with the whole table still to respond, so only premium hands are safe here',
+    UTG1: 'you\'re still early with most players left to act, so keep the range tight',
+    HJ: 'you\'re nearing the button and fewer players remain, so you can open things up a little',
+    CO: 'only the button acts after you, so you can play a wider, more aggressive range',
+    BTN: 'you act last on every street after the flop — the best seat at the table — so you can play the widest range',
+    SB: 'you\'ll be out of position for the rest of the hand, so be a touch more selective',
+    BB: 'you already have a blind invested and you close the action, so you can defend fairly wide',
+  };
+  const ACT_VERB = { fold: 'fold', check: 'check', call: 'call', bet: 'bet', raise: 'raise' };
+
+  let genieCtx = null; // context for follow-up questions
+
+  function genieReset() {
+    const log = el('genie-log');
+    if (log) log.innerHTML = '';
+    const acts = el('genie-actions');
+    if (acts) acts.innerHTML = '';
+  }
+
+  function genieSay(html, opts) {
+    opts = opts || {};
+    const log = el('genie-log');
+    if (!log) return;
+    const row = document.createElement('div');
+    row.className = 'g-msg' + (opts.user ? ' user' : '');
+    row.innerHTML = opts.user
+      ? `<div class="g-bubble user">${html}</div>`
+      : `<div class="g-ava">🧞</div><div class="g-bubble">${html}</div>`;
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function genieChips(chips) {
+    const acts = el('genie-actions');
+    if (!acts) return;
+    acts.innerHTML = '';
+    for (const c of chips) {
+      const b = document.createElement('button');
+      b.className = 'g-chip';
+      b.textContent = c.label;
+      b.addEventListener('click', () => { genieSay(c.label, { user: true }); genieFollowup(c.key); });
+      acts.appendChild(b);
+    }
+  }
+
+  function preflopTier(score) {
+    if (score >= 15) return 'a premium holding — top of the range';
+    if (score >= 10) return 'a strong hand';
+    if (score >= 7) return 'a solid, playable hand';
+    if (score >= 5) return 'a marginal, speculative hand';
+    return 'a weak hand';
+  }
+
+  function genieAdvise(advice, human, legal, pot) {
     if (!coachEnabled) return;
-    if (lastDecision) {
-      const cls = lastDecision.matched ? 'good' : 'bad';
-      const txt = lastDecision.matched
-        ? `${lastDecision.chosenLabel} — matched basic strategy ✓`
-        : `${lastDecision.chosenLabel} — deviated from ${lastDecision.recLabel} ✗`;
-      el('coach-content').innerHTML = `<span class="verdict ${cls}">${txt}</span><div class="reason">Deal the next hand to continue.</div>`;
+    genieReset();
+    const rec = ACT_VERB[advice.action] || advice.action;
+    const preflop = game.board.length === 0;
+
+    if (preflop) {
+      const bd = chenBreakdown(human.holeCards[0], human.holeCards[1]);
+      const pos = game.roles[HUMAN_SEAT];
+      const t = PREFLOP_THRESHOLDS[pos];
+      genieCtx = { phase: 'preflop', advice, bd, pos, legal, pot, human };
+      genieSay(`I'd <b>${rec}</b> here.`);
+      const clears = advice.action === 'raise' || advice.action === 'call';
+      const need = t.open;
+      genieSay(
+        `${holeLabel(human.holeCards)} is <b>${preflopTier(bd.score)}</b> — it scores <b>${bd.score}</b> on the Chen scale. ` +
+        `From ${POS_NAME[pos]} you'd want about <b>${need}+</b> to come in, and ` +
+        (clears
+          ? `your ${bd.score} ${bd.score >= need ? 'clears that comfortably' : 'is close enough with the dead money out there'}, so it's worth playing.`
+          : `your ${bd.score} falls short, so the disciplined play is to let it go.`)
+      );
+      genieChips([
+        { label: 'Break down the score', key: 'chen' },
+        { label: 'Why does position matter?', key: 'position' },
+        { label: 'What are my win odds?', key: 'winpct' },
+      ]);
     } else {
-      el('coach-content').innerHTML = '<span class="reason">You folded or the hand played out without a decision from you.</span>';
+      const madeScore = evaluateBest([...human.holeCards, ...game.board]).score;
+      const made = describeScore(madeScore);
+      const { outs, cardsToCome } = countOuts(human.holeCards, game.board);
+      const equity = cardsToCome ? equityFromOuts(outs, cardsToCome) : null;
+      const oddsNeeded = potOddsPercent(legal.callAmount, pot);
+      genieCtx = { phase: 'postflop', advice, made, outs, cardsToCome, equity, oddsNeeded, legal, pot, human };
+      genieSay(`I'd <b>${rec}</b> here.`);
+      if (legal.callAmount > 0 && outs > 0 && equity != null && madeScore[0] <= 1) {
+        genieSay(
+          `You've got <b>${made}</b> but you're drawing. I count <b>${outs} outs</b> ≈ <b>${equity}% equity</b>, ` +
+          `and the pot is asking you to be good <b>${oddsNeeded.toFixed(0)}%</b> of the time. ` +
+          (equity >= oddsNeeded
+            ? `Your equity beats the price, so continuing is profitable.`
+            : `That's more than your draw is worth, so folding is the disciplined play (unless you expect big future payouts).`)
+        );
+        genieChips([{ label: 'Show the pot-odds math', key: 'potodds' }, { label: 'What are my outs?', key: 'outs' }, { label: 'My win %?', key: 'winpct' }]);
+      } else if (madeScore[0] >= 2) {
+        genieSay(
+          `You've made <b>${made}</b> — that's ahead of most of what your opponents are holding here. ` +
+          (advice.action === 'raise' || advice.action === 'bet'
+            ? `Betting builds the pot and charges draws that would love a free card.`
+            : `Keep control of the pot and get value where you can.`)
+        );
+        genieChips([{ label: 'Why bet now?', key: 'value' }, { label: 'My win %?', key: 'winpct' }]);
+      } else {
+        genieSay(
+          `You've only got <b>${made}</b> with no real draw. ` +
+          (advice.action === 'check' ? `No need to put money in — take the free card and re-evaluate.` : `There's not enough here to keep calling bets, so let it go.`)
+        );
+        genieChips([{ label: 'My win %?', key: 'winpct' }, { label: 'What are outs?', key: 'outs' }]);
+      }
+    }
+  }
+
+  function genieFollowup(key) {
+    const c = genieCtx;
+    if (!c) return;
+    if (key === 'chen' && c.bd) {
+      const parts = c.bd.steps.map((s) => `${s.label}: <b>${s.value > 0 ? '+' : ''}${s.value}</b>`).join(' &nbsp;·&nbsp; ');
+      genieSay(`Here's the Chen math for ${holeLabel(c.human.holeCards)}:<br>${parts}<br>Total ≈ <b>${c.bd.score}</b>. The formula rewards high cards, pairs (doubled), suitedness and connectedness — everything that makes a hand win more often or make the nuts.`);
+    } else if (key === 'position') {
+      genieSay(`Position is leverage: ${POS_WHY[c.pos]}. Acting later means you see what everyone else does before you commit chips, so the same hand is worth more the closer you are to the button — which is exactly why the threshold to play loosens as you move around the table.`);
+    } else if (key === 'winpct') {
+      const s = lastStrength;
+      if (s) genieSay(`Right now you'll win about <b>${Math.round(s.pct * 100)}%</b> of the time against ${s.opps} random opponent${s.opps === 1 ? '' : 's'} still in the hand (Monte-Carlo estimate over hundreds of simulated run-outs). The strength bar up top tracks this live as the board develops.`);
+      else genieSay(`Once it's your turn I'll simulate your live win odds against the field.`);
+    } else if (key === 'potodds' && c.oddsNeeded != null) {
+      const call = c.legal.callAmount;
+      genieSay(`Pot odds = call ÷ (pot + call) = $${call} ÷ ($${Math.round(c.pot)} + $${call}) = <b>${c.oddsNeeded.toFixed(1)}%</b>. That's the share of the time you need to win to break even on the call. Your ~${c.equity}% equity ${c.equity >= c.oddsNeeded ? 'exceeds' : 'falls short of'} that, which is why ${c.equity >= c.oddsNeeded ? 'calling is +EV' : 'folding is correct on price alone'}.`);
+    } else if (key === 'outs') {
+      if (c.outs > 0) genieSay(`You have <b>${c.outs} outs</b> — cards left in the deck that improve you to (likely) the best hand. With ${c.cardsToCome} card${c.cardsToCome === 1 ? '' : 's'} to come, the Rule of ${c.cardsToCome === 2 ? '4' : '2'} puts you around <b>${c.equity}%</b> to get there.`);
+      else genieSay(`No clean outs to a clearly-best hand here — your equity comes mostly from what you've already made.`);
+    } else if (key === 'value') {
+      genieSay(`With a hand this strong you want money going in while you're ahead. Betting gets value from worse hands that call, and it charges flush/straight draws that would happily take a free card and outdraw you. Checking here just lets the pot stay small and gives free equity away.`);
+    }
+  }
+
+  function genieWrapUp(net, result) {
+    if (!coachEnabled) return;
+    const acts = el('genie-actions');
+    if (acts) acts.innerHTML = '';
+    if (lastDecision) {
+      if (lastDecision.matched) genieSay(`Nice — your <b>${lastDecision.chosenLabel}</b> matched the book play. ✅`);
+      else genieSay(`You chose <b>${lastDecision.chosenLabel}</b>; the textbook line was <b>${lastDecision.recLabel}</b>. Not always wrong, but worth noting. 🤔`);
+    }
+    if (result && result.showdown && result.variance && result.variance[HUMAN_SEAT]) {
+      const v = result.variance[HUMAN_SEAT];
+      if (v.luckDelta > 1) genieSay(`You ran <b>hotter</b> than your equity by about $${Math.round(v.luckDelta)} that hand — variance in your favour.`);
+      else if (v.luckDelta < -1) genieSay(`You ran <b>colder</b> than your equity by about $${Math.round(Math.abs(v.luckDelta))} — a cooler, not a misplay.`);
     }
   }
 

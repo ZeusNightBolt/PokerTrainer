@@ -114,9 +114,19 @@
 
     <!-- side column -->
     <div class="side-col">
-      <div class="panel coach" id="coach-panel">
-        <h3><span class="ico">🎓</span> Coach</h3>
-        <div id="coach-content"><span class="reason">Waiting for your turn…</span></div>
+      <div class="panel strength-panel">
+        <h3><span class="ico">💪</span> Hand Strength</h3>
+        <div class="strength-head">
+          <span class="strength-pct" id="strength-pct">—</span>
+          <span class="strength-tier" id="strength-tier"></span>
+        </div>
+        <div class="strength-bar"><span id="strength-fill"></span><i class="strength-tick" style="left:50%"></i></div>
+        <div class="strength-sub" id="strength-sub">Sit down to see your live win odds.</div>
+      </div>
+      <div class="panel genie" id="genie-panel">
+        <h3><span class="ico">🧞</span> Genie <span class="genie-sub">your poker guide</span></h3>
+        <div class="genie-log" id="genie-log"></div>
+        <div class="genie-actions" id="genie-actions"></div>
       </div>
       <div class="panel">
         <h3><span class="ico">🧮</span> Outs &amp; Equity</h3>
