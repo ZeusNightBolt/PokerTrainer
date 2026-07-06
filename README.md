@@ -21,9 +21,13 @@ uploaded as-is).
 The site has three pages:
 
 ### Play (`index.html`)
-- **7-handed felt table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per hand,
-  with staggered card-deal and board-reveal animations, stacked-chip bet visuals, a rotating
-  "on the clock" ring, dealer button, and a winner-celebration highlight.
+- **Live-feeling felt table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per
+  hand. The table renders through a persistent-DOM controller (`js/table.js`) that mutates a
+  stable layout in place rather than rebuilding it each action, so everything transitions
+  smoothly: cards are real perspective **3D flips** (dealt face-down, flipped up on reveal),
+  **poker chips physically fly to the pot** when a street closes and back out to the winner,
+  stacks tween, and the "on the clock" seat gets a rotating ring. Rendering is wrapped in a
+  guard so a hiccup surfaces a recovery button instead of freezing the table.
 - **Medium-hard, natural opponents**: each bot has a randomized skill level (a spread from
   medium to hard) layered on its loose-passive personality. Lower-skill bots make human-like
   mistakes -- missed value bets, over-folds to big bets, softer sizing, less light 3-betting --
@@ -80,8 +84,9 @@ js/equity.js         Monte Carlo preflop equity estimator (variance/luck tracker
 js/bots.js           6 medium-hard bot personalities (skill/mistake model) on the strategy engine
 js/game.js           Betting-round state machine, side pots, showdown, rake, variance calc
 js/stats.js          localStorage-backed session/adherence/variance stats
-js/render.js         Shared card-face rendering (game + learn widgets)
-js/ui.js             Game-table DOM rendering and event wiring
+js/render.js         Shared card-face markup (game table + learn widgets)
+js/table.js          Persistent-DOM table renderer (3D card flips, chip flight)
+js/ui.js             Game flow, pacing loop, coach/outs/stats panels, event wiring
 js/learn.js          Learn-page interactive widgets
 ```
 

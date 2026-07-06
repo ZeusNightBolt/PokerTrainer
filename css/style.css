@@ -362,23 +362,28 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 .card.deal { animation: dealIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .card.small { --w: 34px; border-radius: 5px; }
 .card.red { color: #d21f3c; }
-.card .corner {
+/* corner index + centre pip -- shared by the flat learn cards (.card) and
+   the 3D table card faces (.cface) */
+.card .corner, .cface .corner {
   position: absolute;
   display: flex; flex-direction: column; align-items: center;
-  line-height: 0.92;
+  line-height: 0.9;
+  font-weight: 800;
 }
-.card .corner .r { font-size: calc(var(--w) * 0.34); }
-.card .corner .s { font-size: calc(var(--w) * 0.28); }
-.card .corner.tl { top: 4px; left: 5px; }
-.card .corner.br { bottom: 4px; right: 5px; transform: rotate(180deg); }
-.card .pip {
+.card .corner .r, .cface .corner .r { font-size: calc(var(--w) * 0.34); }
+.card .corner .s, .cface .corner .s { font-size: calc(var(--w) * 0.28); margin-top: -1px; }
+.card .corner.tl, .cface .corner.tl { top: 4px; left: 5px; }
+.card .corner.br, .cface .corner.br { bottom: 4px; right: 5px; transform: rotate(180deg); }
+.card .pip, .cface .pip {
   position: absolute; left: 50%; top: 50%;
   transform: translate(-50%, -50%);
-  font-size: calc(var(--w) * 0.62);
-  opacity: 0.9;
+  font-size: calc(var(--w) * 0.6);
+  opacity: 0.92;
 }
 .card.small .corner.br { display: none; }
 .card.small .pip { font-size: calc(var(--w) * 0.7); }
+.card-slot.small .cface .corner.br { display: none; }
+.card-slot.small .cface .pip { font-size: calc(var(--w) * 0.72); }
 
 .card.back {
   background:
@@ -397,6 +402,128 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   animation: none;
 }
 .board-empty { color: rgba(255,255,255,0.4); font-size: 0.82rem; }
+
+/* ============================================================
+   3D TABLE CARDS (js/table.js) — real perspective flip
+   ============================================================ */
+.card-slot {
+  --w: 56px;
+  position: relative;
+  width: var(--w);
+  height: calc(var(--w) * 1.4);
+  flex: none;
+  perspective: 850px;
+}
+.card-slot.small { --w: 36px; }
+.card-slot.hidden { visibility: hidden; }
+/* faint felt marker for an as-yet-undealt board spot */
+.card-slot.board-slot.empty { box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.08); border-radius: 8px; }
+.card-slot.board-slot.empty .flipper { visibility: hidden; }
+
+.flipper {
+  position: relative; width: 100%; height: 100%;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.2, 0.85, 0.25, 1);
+  transform: rotateY(180deg); /* default: face-down (back showing) */
+  will-change: transform;
+}
+.flipper.up { transform: rotateY(0deg); }
+.cface {
+  position: absolute; inset: 0;
+  border-radius: calc(var(--w) * 0.14);
+  overflow: hidden;
+  backface-visibility: hidden; -webkit-backface-visibility: hidden;
+}
+.cface.front {
+  background: linear-gradient(157deg, #ffffff 0%, #f4f6fa 52%, #e6eaf1 100%);
+  color: #171b24;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10), inset 0 1px 0 rgba(255,255,255,0.9), 0 5px 12px rgba(0,0,0,0.45);
+}
+.cface.front.red { color: #d5253c; }
+/* soft diagonal gloss sweep across the card face */
+.cface.front::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(125deg, rgba(255,255,255,0.55) 0%, rgba(255,255,255,0) 34%);
+  pointer-events: none;
+}
+.cface.back {
+  transform: rotateY(180deg);
+  background:
+    radial-gradient(120% 90% at 50% 0%, #34579c, #223a6e 55%, #182a54 100%);
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.16), inset 0 0 0 4px #17274c, 0 5px 12px rgba(0,0,0,0.45);
+}
+.cface.back::after {
+  content: ''; position: absolute; inset: 4px;
+  border: 1px solid rgba(255,255,255,0.22);
+  border-radius: calc(var(--w) * 0.1);
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.08) 0 5px, transparent 5px 10px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.05) 0 5px, transparent 5px 10px);
+}
+
+/* deal-in: the slot flies down onto the felt (position), while the flipper
+   handles the rotation separately -- no conflict between the two. */
+.card-slot.dealing { animation: dealSlot 0.42s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: var(--deal-delay, 0ms); }
+@keyframes dealSlot {
+  from { opacity: 0; transform: translateY(-42px) translateX(8px) rotate(-9deg) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+
+.hole { display: flex; justify-content: center; gap: 4px; margin: 0.3rem 0 0.25rem; min-height: calc(36px * 1.4); }
+
+/* ============================================================
+   POKER CHIPS + BET AREA + CHIP FLIGHT
+   ============================================================ */
+.pchip {
+  width: 15px; height: 15px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 38% 32%, #ffe79a, #e3b64a 55%, #b98a2c);
+  box-shadow:
+    inset 0 0 0 2px rgba(255,255,255,0.35),
+    inset 0 0 0 3px rgba(0,0,0,0.25),
+    0 1px 2px rgba(0,0,0,0.6);
+  position: relative;
+}
+/* dashed "edge spots" of a real casino chip */
+.pchip::before {
+  content: ''; position: absolute; inset: 2px; border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255,255,255,0.65) 0deg 12deg, transparent 12deg 42deg);
+  -webkit-mask: radial-gradient(circle, transparent 55%, #000 56%);
+  mask: radial-gradient(circle, transparent 55%, #000 56%);
+}
+.chip-stack { position: relative; display: inline-flex; }
+.chip-stack .pchip { margin-left: -9px; }
+.chip-stack .pchip:first-child { margin-left: 0; }
+
+.seat .bet-area {
+  position: absolute;
+  left: 50%; top: -26px;
+  transform: translateX(-50%);
+  display: flex; align-items: center; gap: 5px;
+  z-index: 5; white-space: nowrap;
+  animation: betPlace 0.32s cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+.seat .bet-area .bet-amt {
+  font-family: var(--font-num); font-weight: 800; font-size: 0.72rem; color: #ffe9a8;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.7);
+}
+/* the two top seats keep their chips on the felt side (below) */
+.seat-3 .bet-area, .seat-4 .bet-area { top: auto; bottom: -26px; }
+@keyframes betPlace {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px) scale(0.8); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+
+/* a single chip that physically flies from a seat to the pot (or back) */
+.fly-chip {
+  position: fixed; z-index: 90;
+  width: 18px; height: 18px; border-radius: 50%; margin: -9px 0 0 -9px;
+  background: radial-gradient(circle at 38% 32%, hsl(var(--chip-hue, 44) 85% 72%), hsl(var(--chip-hue, 44) 60% 45%));
+  box-shadow: inset 0 0 0 2px rgba(255,255,255,0.4), 0 2px 6px rgba(0,0,0,0.6);
+  transition: transform 0.6s cubic-bezier(0.3, 0.7, 0.2, 1), opacity 0.6s ease;
+  pointer-events: none;
+}
 
 /* ---------- Seats ---------- */
 .seat {
@@ -470,6 +597,13 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 .seat .seat-stack {
   font-size: 0.8rem; font-weight: 800; color: var(--gold);
   font-family: var(--font-num);
+  transition: color 0.25s;
+}
+.seat .seat-stack.flash { animation: stackFlash 0.5s ease; }
+@keyframes stackFlash {
+  0% { transform: scale(1); }
+  35% { transform: scale(1.16); color: #fff; }
+  100% { transform: scale(1); }
 }
 .seat .dealer-chip {
   position: absolute; top: -8px; right: -8px;
@@ -849,6 +983,8 @@ input[type=range]::-moz-range-thumb {
 }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: 0.001s !important; }
+  .flipper { transition: none; }
+  .fly-chip { display: none; }
 }
 
 /* ============================================================
@@ -882,7 +1018,10 @@ button, select, input, .range-cell, .outs-chip {
   .pot-pill { font-size: 0.88rem; padding: 0.2rem 0.7rem; margin-bottom: 0.45rem; }
   .card { --w: 44px; }
   .card.small { --w: 30px; }
+  .card-slot { --w: 46px; }
+  .card-slot.small { --w: 31px; }
   .board-cards { gap: 0.3rem; min-height: 64px; }
+  .hole { min-height: calc(31px * 1.4); gap: 3px; margin: 0.2rem 0; }
   .street-badge { margin-top: 0.4rem; font-size: 0.62rem; }
 
   .seat { width: 92px; }
@@ -892,8 +1031,11 @@ button, select, input, .range-cell, .outs-chip {
   .seat .seat-role { font-size: 0.54rem; }
   .seat .seat-cards { min-height: 42px; margin: 0.2rem 0; }
   .seat .seat-stack { font-size: 0.72rem; }
-  .seat .seat-bet { font-size: 0.64rem; bottom: -18px; }
-  .seat .seat-bet .chip-dot { width: 10px; height: 10px; }
+  .seat .bet-area { top: -20px; gap: 3px; }
+  .seat-3 .bet-area, .seat-4 .bet-area { bottom: -20px; }
+  .seat .bet-area .bet-amt { font-size: 0.62rem; }
+  .seat .pchip { width: 12px; height: 12px; }
+  .chip-stack .pchip { margin-left: -7px; }
   .seat .action-bubble { font-size: 0.62rem; top: -12px; }
   .seat .dealer-chip { width: 18px; height: 18px; font-size: 0.58rem; }
 
@@ -941,6 +1083,9 @@ button, select, input, .range-cell, .outs-chip {
 /* very narrow phones */
 @media (max-width: 390px) {
   .card { --w: 38px; }
+  .card-slot { --w: 40px; }
+  .card-slot.small { --w: 28px; }
+  .hole { min-height: calc(28px * 1.4); }
   .seat { width: 82px; }
   .table-wrap { min-height: 400px; }
   .action-main .btn { min-width: 64px; font-size: 0.92rem; }

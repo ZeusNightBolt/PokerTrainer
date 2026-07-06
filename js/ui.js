@@ -17,7 +17,6 @@
   // stepToken invalidates any in-flight pacing loop when a new hand is dealt.
   let stepToken = 0;
   let thinkingSeat = null; // seat currently "thinking" (shows animated dots)
-  let dealAnimSeats = false; // true for the first render of a hand (animate the deal)
   const SPEEDS = [
     { label: 'Realistic', mult: 1, street: 900, deal: 620 },
     { label: 'Fast', mult: 0.42, street: 380, deal: 300 },
@@ -73,12 +72,18 @@
   el('stake-select').addEventListener('change', () => renderVenueNotes(CASINO_RULES[el('venue-select').value]));
 
   el('start-btn').addEventListener('click', () => {
-    coachEnabled = el('coach-toggle').checked;
-    el('coach-panel').style.display = coachEnabled ? '' : 'none';
-    game = new PokerGame(el('venue-select').value, el('stake-select').value, el('name-input').value.trim() || 'You');
-    el('setup-screen').style.display = 'none';
-    el('game-screen').style.display = 'grid';
-    dealNextHand();
+    try {
+      coachEnabled = el('coach-toggle').checked;
+      el('coach-panel').style.display = coachEnabled ? '' : 'none';
+      game = new PokerGame(el('venue-select').value, el('stake-select').value, el('name-input').value.trim() || 'You');
+      el('setup-screen').style.display = 'none';
+      el('game-screen').style.display = 'grid';
+      Table.init();
+      dealNextHand();
+    } catch (e) {
+      console.error('failed to start game', e);
+      alert('Could not start the game — please reload the page.');
+    }
   });
 
   /* ---------------- Hand flow ---------------- */
@@ -101,9 +106,7 @@
     lastDecision = null;
     bubbles = {};
     thinkingSeat = null;
-    dealAnimSeats = true;
-    prevBoardLen = 0;
-    prevPot = 0;
+    try { Table.startHand(game.getPublicState()); } catch (e) { console.error(e); }
     advance();
   }
 
@@ -112,44 +115,63 @@
      runout reads naturally. */
   async function advance() {
     const token = ++stepToken;
-    render();
-    while (!game.lastResult) {
-      const seat = game.currentActorSeat();
-      if (seat === null) { game.advanceStreet(); render(); continue; }
-      if (seat === HUMAN_SEAT) { thinkingSeat = null; setupTurn(); return; }
-
-      const legal = game.legalActionsFor(seat);
-      const beforeStreet = game.street;
-      const d = game.decideBot(seat); // decide first so think-time fits the action
-
-      const isBigSpot = legal.callAmount > game.potTotal() * 0.6 || (d.amount && d.amount > game.potTotal());
-      const wait = thinkTime(d.action, isBigSpot);
-      if (wait) {
-        thinkingSeat = seat;
-        render();
-        await sleep(wait);
-        if (token !== stepToken) return; // a new hand superseded this loop
-      }
-      thinkingSeat = null;
-
-      game.act(seat, d.action, d.amount);
-      const s = game.seats[seat];
-      const bubbleLabel =
-        d.action === 'fold' ? 'Folds' :
-        d.action === 'check' ? 'Checks' :
-        d.action === 'call' ? (legal.callAmount > 0 ? `Calls $${legal.callAmount}` : 'Checks') :
-        s.allIn ? `All-in $${s.committedRound}` :
-        d.action === 'bet' ? `Bets $${s.committedRound}` : `Raises to $${s.committedRound}`;
-      setBubble(seat, s.allIn && d.action !== 'fold' ? 'allin' : d.action, bubbleLabel);
+    try {
       render();
+      while (!game.lastResult) {
+        const seat = game.currentActorSeat();
+        if (seat === null) { game.advanceStreet(); render(); continue; }
+        if (seat === HUMAN_SEAT) { thinkingSeat = null; setupTurn(); return; }
 
-      if (!game.lastResult && game.street !== beforeStreet) {
-        const streetDelay = SPEEDS[speedIdx].street;
-        if (streetDelay) { await sleep(streetDelay); if (token !== stepToken) return; render(); }
+        const legal = game.legalActionsFor(seat);
+        const beforeStreet = game.street;
+        const d = game.decideBot(seat); // decide first so think-time fits the action
+
+        const isBigSpot = legal.callAmount > game.potTotal() * 0.6 || (d.amount && d.amount > game.potTotal());
+        const wait = thinkTime(d.action, isBigSpot);
+        if (wait) {
+          thinkingSeat = seat;
+          render();
+          await sleep(wait);
+          if (token !== stepToken) return; // a new hand superseded this loop
+        }
+        thinkingSeat = null;
+
+        game.act(seat, d.action, d.amount);
+        const s = game.seats[seat];
+        const bubbleLabel =
+          d.action === 'fold' ? 'Folds' :
+          d.action === 'check' ? 'Checks' :
+          d.action === 'call' ? (legal.callAmount > 0 ? `Calls $${legal.callAmount}` : 'Checks') :
+          s.allIn ? `All-in $${s.committedRound}` :
+          d.action === 'bet' ? `Bets $${s.committedRound}` : `Raises to $${s.committedRound}`;
+        setBubble(seat, s.allIn && d.action !== 'fold' ? 'allin' : d.action, bubbleLabel);
+        render();
+
+        if (!game.lastResult && game.street !== beforeStreet) {
+          const streetDelay = SPEEDS[speedIdx].street;
+          if (streetDelay) { await sleep(streetDelay); if (token !== stepToken) return; render(); }
+        }
       }
+      render();
+      finishHand();
+    } catch (e) {
+      // Never let a stray error leave the table frozen mid-hand: log it,
+      // re-render what we can, and surface a recovery button.
+      console.error('game loop error', e);
+      try { render(); } catch (_) { /* ignore */ }
+      showRecovery();
     }
-    render();
-    finishHand();
+  }
+
+  function showRecovery() {
+    el('action-dock').style.display = 'none';
+    const box = el('hand-result');
+    box.style.display = 'block';
+    box.innerHTML = '<div class="headline">Something hiccuped</div>' +
+      '<div class="detail">The hand hit an unexpected state. You can deal a fresh one.</div>' +
+      '<button class="btn gold" id="next-hand-btn">Deal Next Hand ▸</button>';
+    const btn = el('next-hand-btn');
+    if (btn) btn.addEventListener('click', dealNextHand);
   }
 
   function finishHand() {
@@ -249,6 +271,7 @@
   }
 
   function submitHumanAction(action, amount) {
+    if (!game || game.lastResult || game.currentActorSeat() !== HUMAN_SEAT) return; // guard stray/double taps
     // Hide the dock before anything async runs so a double-tap can't act twice.
     el('action-dock').style.display = 'none';
     if (pendingAdvice) {
@@ -350,82 +373,26 @@
 
   /* ---------------- Table render ---------------- */
 
-  let prevBoardLen = 0; // so only freshly-revealed board cards animate
-  let prevPot = 0;      // so the pot pill can pulse when it grows
-
+  // Rendering is delegated to the persistent Table controller (js/table.js),
+  // which mutates a stable DOM in place (3D card flips, chip flight, tweened
+  // stacks) instead of rebuilding the table every action. This function only
+  // marshals state and updates the lightweight text panels; any error is
+  // contained so a render hiccup can never freeze the game loop.
   function render() {
-    const state = game.getPublicState();
-    const potEl = el('pot-display');
-    potEl.textContent = `Pot $${state.pot}`;
-    if (state.pot > prevPot) {
-      potEl.classList.remove('bump');
-      void potEl.offsetWidth; // restart the animation
-      potEl.classList.add('bump');
-    }
-    prevPot = state.pot;
-    // Only newly-revealed board cards get the deal animation; already-shown
-    // cards render statically so the whole board doesn't re-flip every action.
-    if (state.board.length === 0) {
-      el('board-cards').innerHTML = '<span class="board-empty">Pre-flop</span>';
-      prevBoardLen = 0;
-    } else {
-      el('board-cards').innerHTML = state.board
-        .map((c, i) => cardFaceHTML(c, { deal: i >= prevBoardLen, dealDelay: (i - prevBoardLen) * 120 }))
-        .join('');
-      prevBoardLen = state.board.length;
-    }
-    el('street-label').textContent = `${state.venue.split('—')[0].trim()} · ${state.stakeLabel.split(' ')[0]} · ${state.street.toUpperCase()}`;
-
-    const winners = new Set();
-    if (state.lastResult) for (const p of state.lastResult.pots) for (const w of p.winners) winners.add(w);
-
-    const wrap = el('table-wrap');
-    wrap.querySelectorAll('.seat').forEach((n) => n.remove());
-    for (const s of state.seats) {
-      const div = document.createElement('div');
-      div.className = `seat seat-${s.seat}` +
-        (s.folded ? ' folded' : '') + (s.isHuman ? ' human' : '') +
-        (state.actor === s.seat ? ' acting' : '') +
-        (thinkingSeat === s.seat ? ' thinking' : '') +
-        (winners.has(s.seat) ? ' winner' : '');
-      // Hole cards animate only on the hand's first render (the deal), not on
-      // every subsequent repaint.
-      const dealNow = dealAnimSeats;
-      const cards = s.holeCards
-        ? s.holeCards.map((c, i) => cardFaceHTML(c, { small: true, deal: dealNow, dealDelay: s.seat * 70 + i * 45 })).join('')
-        : (s.folded ? '' : cardBackHTML(true, dealNow, s.seat * 70) + cardBackHTML(true, dealNow, s.seat * 70 + 45));
-      const avatarIco = s.isHuman ? '🧑' : '🤖';
-      const b = bubbles[s.seat];
-      const bubbleHtml = (b && Date.now() - b.ts < BUBBLE_TTL && !state.lastResult)
-        ? `<div class="action-bubble ${b.cls}">${b.label}</div>`
-        : (thinkingSeat === s.seat ? '<div class="action-bubble thinking-dots"><span></span><span></span><span></span></div>' : '');
-      div.innerHTML =
-        (state.buttonSeat === s.seat ? '<div class="dealer-chip">D</div>' : '') +
-        `<div class="seat-inner">` +
-        bubbleHtml +
-        `<div class="avatar">${avatarIco}</div>` +
-        `<div class="seat-name">${s.name}</div>` +
-        `<div class="seat-role">${state.roles[s.seat] || ''}</div>` +
-        `<div class="seat-cards">${cards}</div>` +
-        `<div class="seat-stack">$${s.stack}</div>` +
-        (s.committedRound > 0 ? `<div class="seat-bet">${chipStackHTML(s.committedRound)}$${s.committedRound}</div>` : '') +
-        (s.allIn ? '<div class="badge-allin">ALL-IN</div>' : '') +
-        `</div>`;
-      wrap.appendChild(div);
-    }
-    dealAnimSeats = false; // consumed after first paint of the hand
-
-    el('log-content').innerHTML = state.log.map((l) => `<div>${l}</div>`).join('');
-    el('log-content').scrollTop = el('log-content').scrollHeight;
-    renderStats();
-  }
-
-  /* a little stack of chip dots sized to the bet, for a more physical feel */
-  function chipStackHTML(amount) {
-    const n = amount >= 200 ? 4 : amount >= 60 ? 3 : amount >= 15 ? 2 : 1;
-    let s = '<span class="chip-stack">';
-    for (let i = 0; i < n; i++) s += '<span class="chip-dot"></span>';
-    return s + '</span>';
+    if (!game) return;
+    let state;
+    try { state = game.getPublicState(); } catch (e) { console.error('state error', e); return; }
+    try {
+      Table.update(state, { thinkingSeat, bubbles, bubbleTTL: BUBBLE_TTL });
+    } catch (e) { console.error('table render error', e); }
+    try {
+      el('street-label').textContent =
+        `${state.venue.split('—')[0].trim()} · ${state.stakeLabel.split(' ')[0]} · ${state.street.toUpperCase()}`;
+      const log = el('log-content');
+      log.innerHTML = state.log.map((l) => `<div>${l}</div>`).join('');
+      log.scrollTop = log.scrollHeight;
+      renderStats();
+    } catch (e) { console.error('panel render error', e); }
   }
 
   function renderStats() {
