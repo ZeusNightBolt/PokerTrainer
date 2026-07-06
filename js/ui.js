@@ -12,20 +12,39 @@
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
   /* ---- action pacing ---- */
-  // Bot actions play out on a delay so the hand visibly goes around the
-  // table instead of resolving in a single repaint. stepToken invalidates
-  // any in-flight pacing loop when a new hand is dealt.
+  // Bots "think" for a beat before acting so the hand visibly goes around
+  // the table like a real game, instead of resolving in a single repaint.
+  // stepToken invalidates any in-flight pacing loop when a new hand is dealt.
   let stepToken = 0;
+  let thinkingSeat = null; // seat currently "thinking" (shows animated dots)
+  let dealAnimSeats = false; // true for the first render of a hand (animate the deal)
   const SPEEDS = [
-    { label: '1×', bot: 520, street: 800 },
-    { label: '2×', bot: 240, street: 400 },
-    { label: '⚡', bot: 0, street: 0 },
+    { label: 'Realistic', mult: 1, street: 900, deal: 620 },
+    { label: 'Fast', mult: 0.42, street: 380, deal: 300 },
+    { label: 'Instant', mult: 0, street: 0, deal: 0 },
   ];
   let speedIdx = Number(localStorage.getItem('pokertrainer.speed'));
   if (!Number.isInteger(speedIdx) || speedIdx < 0 || speedIdx >= SPEEDS.length) speedIdx = 0;
 
+  /* How long a bot "thinks" before a given action. Snap folds/checks are
+     quick; calls take a moment; bets and especially raises look like a real
+     decision. Jittered so no two look identical, and kept in the 0.6-2.1s
+     band the way a live player pauses -- long enough to feel human, short
+     enough to stay bearable. */
+  function thinkTime(action, isBigSpot) {
+    const mult = SPEEDS[speedIdx].mult;
+    if (mult === 0) return 0;
+    let base;
+    if (action === 'fold' || action === 'check') base = 650;
+    else if (action === 'call') base = 1050;
+    else base = 1450; // bet / raise / allin
+    if (isBigSpot) base += 400;
+    const jitter = base * (0.75 + Math.random() * 0.6); // ±
+    return Math.round(Math.min(2100, jitter) * mult);
+  }
+
   /* transient per-seat action bubbles ("Calls $6"), drawn by render() while fresh */
-  const BUBBLE_TTL = 1500;
+  const BUBBLE_TTL = 1600;
   let bubbles = {}; // seat -> { label, cls, ts }
   function setBubble(seat, cls, label) {
     bubbles[seat] = { label, cls, ts: Date.now() };
@@ -81,42 +100,52 @@
     pendingAdvice = null;
     lastDecision = null;
     bubbles = {};
+    thinkingSeat = null;
+    dealAnimSeats = true;
+    prevBoardLen = 0;
+    prevPot = 0;
     advance();
   }
 
-  /* Paced game loop: bots act one at a time with a visible delay and an
-     action bubble; new streets pause briefly so the runout reads naturally. */
+  /* Paced game loop: each bot "thinks" for a beat (animated dots on its
+     seat) then acts with an action bubble; new streets pause briefly so the
+     runout reads naturally. */
   async function advance() {
     const token = ++stepToken;
     render();
     while (!game.lastResult) {
       const seat = game.currentActorSeat();
       if (seat === null) { game.advanceStreet(); render(); continue; }
-      if (seat === HUMAN_SEAT) { setupTurn(); return; }
-
-      const { bot: botDelay, street: streetDelay } = SPEEDS[speedIdx];
-      if (botDelay) await sleep(botDelay);
-      if (token !== stepToken) return; // a new hand superseded this loop
+      if (seat === HUMAN_SEAT) { thinkingSeat = null; setupTurn(); return; }
 
       const legal = game.legalActionsFor(seat);
       const beforeStreet = game.street;
-      const d = game.decideBot(seat);
-      game.act(seat, d.action, d.amount);
+      const d = game.decideBot(seat); // decide first so think-time fits the action
 
+      const isBigSpot = legal.callAmount > game.potTotal() * 0.6 || (d.amount && d.amount > game.potTotal());
+      const wait = thinkTime(d.action, isBigSpot);
+      if (wait) {
+        thinkingSeat = seat;
+        render();
+        await sleep(wait);
+        if (token !== stepToken) return; // a new hand superseded this loop
+      }
+      thinkingSeat = null;
+
+      game.act(seat, d.action, d.amount);
       const s = game.seats[seat];
       const bubbleLabel =
         d.action === 'fold' ? 'Folds' :
         d.action === 'check' ? 'Checks' :
-        d.action === 'call' ? `Calls $${legal.callAmount}` :
+        d.action === 'call' ? (legal.callAmount > 0 ? `Calls $${legal.callAmount}` : 'Checks') :
         s.allIn ? `All-in $${s.committedRound}` :
         d.action === 'bet' ? `Bets $${s.committedRound}` : `Raises to $${s.committedRound}`;
       setBubble(seat, s.allIn && d.action !== 'fold' ? 'allin' : d.action, bubbleLabel);
       render();
 
-      if (!game.lastResult && game.street !== beforeStreet && streetDelay) {
-        await sleep(streetDelay);
-        if (token !== stepToken) return;
-        render();
+      if (!game.lastResult && game.street !== beforeStreet) {
+        const streetDelay = SPEEDS[speedIdx].street;
+        if (streetDelay) { await sleep(streetDelay); if (token !== stepToken) return; render(); }
       }
     }
     render();
@@ -321,12 +350,30 @@
 
   /* ---------------- Table render ---------------- */
 
+  let prevBoardLen = 0; // so only freshly-revealed board cards animate
+  let prevPot = 0;      // so the pot pill can pulse when it grows
+
   function render() {
     const state = game.getPublicState();
-    el('pot-display').textContent = `Pot $${state.pot}`;
-    el('board-cards').innerHTML = state.board.length
-      ? state.board.map((c) => cardFaceHTML(c)).join('')
-      : '<span class="board-empty">Pre-flop</span>';
+    const potEl = el('pot-display');
+    potEl.textContent = `Pot $${state.pot}`;
+    if (state.pot > prevPot) {
+      potEl.classList.remove('bump');
+      void potEl.offsetWidth; // restart the animation
+      potEl.classList.add('bump');
+    }
+    prevPot = state.pot;
+    // Only newly-revealed board cards get the deal animation; already-shown
+    // cards render statically so the whole board doesn't re-flip every action.
+    if (state.board.length === 0) {
+      el('board-cards').innerHTML = '<span class="board-empty">Pre-flop</span>';
+      prevBoardLen = 0;
+    } else {
+      el('board-cards').innerHTML = state.board
+        .map((c, i) => cardFaceHTML(c, { deal: i >= prevBoardLen, dealDelay: (i - prevBoardLen) * 120 }))
+        .join('');
+      prevBoardLen = state.board.length;
+    }
     el('street-label').textContent = `${state.venue.split('—')[0].trim()} · ${state.stakeLabel.split(' ')[0]} · ${state.street.toUpperCase()}`;
 
     const winners = new Set();
@@ -339,14 +386,19 @@
       div.className = `seat seat-${s.seat}` +
         (s.folded ? ' folded' : '') + (s.isHuman ? ' human' : '') +
         (state.actor === s.seat ? ' acting' : '') +
+        (thinkingSeat === s.seat ? ' thinking' : '') +
         (winners.has(s.seat) ? ' winner' : '');
+      // Hole cards animate only on the hand's first render (the deal), not on
+      // every subsequent repaint.
+      const dealNow = dealAnimSeats;
       const cards = s.holeCards
-        ? s.holeCards.map((c) => cardFaceHTML(c, { small: true })).join('')
-        : (s.folded ? '' : cardBackHTML(true) + cardBackHTML(true));
+        ? s.holeCards.map((c, i) => cardFaceHTML(c, { small: true, deal: dealNow, dealDelay: s.seat * 70 + i * 45 })).join('')
+        : (s.folded ? '' : cardBackHTML(true, dealNow, s.seat * 70) + cardBackHTML(true, dealNow, s.seat * 70 + 45));
       const avatarIco = s.isHuman ? '🧑' : '🤖';
       const b = bubbles[s.seat];
       const bubbleHtml = (b && Date.now() - b.ts < BUBBLE_TTL && !state.lastResult)
-        ? `<div class="action-bubble ${b.cls}">${b.label}</div>` : '';
+        ? `<div class="action-bubble ${b.cls}">${b.label}</div>`
+        : (thinkingSeat === s.seat ? '<div class="action-bubble thinking-dots"><span></span><span></span><span></span></div>' : '');
       div.innerHTML =
         (state.buttonSeat === s.seat ? '<div class="dealer-chip">D</div>' : '') +
         `<div class="seat-inner">` +
@@ -356,15 +408,24 @@
         `<div class="seat-role">${state.roles[s.seat] || ''}</div>` +
         `<div class="seat-cards">${cards}</div>` +
         `<div class="seat-stack">$${s.stack}</div>` +
-        (s.committedRound > 0 ? `<div class="seat-bet"><span class="chip-dot"></span>$${s.committedRound}</div>` : '') +
+        (s.committedRound > 0 ? `<div class="seat-bet">${chipStackHTML(s.committedRound)}$${s.committedRound}</div>` : '') +
         (s.allIn ? '<div class="badge-allin">ALL-IN</div>' : '') +
         `</div>`;
       wrap.appendChild(div);
     }
+    dealAnimSeats = false; // consumed after first paint of the hand
 
     el('log-content').innerHTML = state.log.map((l) => `<div>${l}</div>`).join('');
     el('log-content').scrollTop = el('log-content').scrollHeight;
     renderStats();
+  }
+
+  /* a little stack of chip dots sized to the bet, for a more physical feel */
+  function chipStackHTML(amount) {
+    const n = amount >= 200 ? 4 : amount >= 60 ? 3 : amount >= 15 ? 2 : 1;
+    let s = '<span class="chip-stack">';
+    for (let i = 0; i < n; i++) s += '<span class="chip-dot"></span>';
+    return s + '</span>';
   }
 
   function renderStats() {

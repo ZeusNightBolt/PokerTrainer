@@ -22,14 +22,18 @@ The site has three pages:
 
 ### Play (`index.html`)
 - **7-handed felt table**: you + 6 randomized bot opponents, one fresh 52-card shuffle per hand,
-  with dealt-card animations, chip/bet visuals, dealer button, and winner highlighting. Bots are
-  tuned loose-passive (limp/call-anyway probabilities on top of their strategy-engine baseline)
-  so hands actually play out multi-way -- most showdowns see 3-4+ players to the river instead
-  of folding around to one raiser, which is what a strict "always fold the -EV hand" table would
-  otherwise produce almost every time.
-- **Paced action**: bots act one at a time with floating action bubbles ("Calls $6", "Raises to
-  $20"), and new streets pause briefly, so every hand visibly plays out around the table. A
-  speed toggle in the action dock cycles 1× / 2× / instant (persisted).
+  with staggered card-deal and board-reveal animations, stacked-chip bet visuals, a rotating
+  "on the clock" ring, dealer button, and a winner-celebration highlight.
+- **Medium-hard, natural opponents**: each bot has a randomized skill level (a spread from
+  medium to hard) layered on its loose-passive personality. Lower-skill bots make human-like
+  mistakes -- missed value bets, over-folds to big bets, softer sizing, less light 3-betting --
+  so the table is a beatable, natural mix rather than six always-correct pros drilling you.
+  Hands still play deep and multi-way (most showdowns see 3-4+ players to the river).
+- **Realistic pacing**: bots "think" for a beat before acting (animated dots on the seat that's
+  on the clock), with the pause length fitting the decision -- snap folds are quick, big
+  bets/raises take ~1-2 seconds like a real player -- then act with a floating bubble ("Calls
+  $6", "Raises to $20"). New streets pause briefly so each runout reads naturally. A speed
+  toggle cycles Realistic / Fast / Instant (persisted).
 - **Mobile-first play**: on phones the table flips to a portrait oval with seats redistributed
   around it, and the action dock sticks to the thumb zone with full-size touch targets. All
   three pages are responsive with proper viewport handling.
@@ -73,7 +77,7 @@ js/cards.js          Card/Deck classes + best-5-of-7 hand evaluator
 js/rules.js          Borgata/Parx stake, buy-in, and rake configuration
 js/strategy.js       Chen Formula preflop scoring + outs/pot-odds postflop advisor
 js/equity.js         Monte Carlo preflop equity estimator (variance/luck tracker)
-js/bots.js           6 loose-passive-tuned bot personalities built on the strategy engine
+js/bots.js           6 medium-hard bot personalities (skill/mistake model) on the strategy engine
 js/game.js           Betting-round state machine, side pots, showdown, rake, variance calc
 js/stats.js          localStorage-backed session/adherence/variance stats
 js/render.js         Shared card-face rendering (game + learn widgets)

@@ -263,20 +263,31 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   min-height: 430px;
   border-radius: 46% / 44%;
   background:
-    radial-gradient(60% 55% at 50% 42%, var(--felt-0), var(--felt-1) 58%, var(--felt-2) 100%);
+    radial-gradient(58% 52% at 50% 40%, #2a8f63 0%, var(--felt-0) 34%, var(--felt-1) 66%, var(--felt-2) 100%);
   border: 14px solid var(--rail);
   box-shadow:
-    0 0 0 2px rgba(0,0,0,0.5),
-    0 0 0 6px var(--rail-hi),
-    inset 0 0 80px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(0,0,0,0.6),
+    0 0 0 7px var(--rail-hi),
+    0 0 0 9px rgba(0,0,0,0.5),
+    inset 0 0 90px rgba(0, 0, 0, 0.6),
     var(--shadow-lg);
 }
 .table-wrap::before {
-  /* subtle felt speckle + inner ring */
+  /* felt micro-texture + soft vignette + inner rail ring */
   content: '';
-  position: absolute; inset: 5%;
+  position: absolute; inset: 0;
   border-radius: 46% / 44%;
-  border: 2px solid rgba(255, 255, 255, 0.06);
+  pointer-events: none;
+  background-image:
+    radial-gradient(circle at 50% 42%, transparent 52%, rgba(0,0,0,0.28) 100%),
+    repeating-radial-gradient(circle at 50% 42%, rgba(255,255,255,0.014) 0, rgba(255,255,255,0.014) 1px, transparent 1px, transparent 3px);
+}
+.table-wrap::after {
+  content: '';
+  position: absolute; inset: 4.5%;
+  border-radius: 46% / 44%;
+  border: 2px solid rgba(255, 255, 255, 0.07);
+  box-shadow: inset 0 0 40px rgba(0,0,0,0.25);
   pointer-events: none;
 }
 .table-felt-logo {
@@ -301,15 +312,24 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 }
 .pot-pill {
   display: inline-flex; align-items: center; gap: 0.4rem;
-  background: rgba(0, 0, 0, 0.42);
-  border: 1px solid rgba(231, 196, 90, 0.4);
+  background: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.4));
+  border: 1px solid rgba(231, 196, 90, 0.55);
   color: var(--gold);
   font-weight: 800;
   font-size: 1rem;
-  padding: 0.28rem 0.85rem;
+  padding: 0.3rem 0.95rem;
   border-radius: 999px;
   margin-bottom: 0.7rem;
   font-family: var(--font-num);
+  box-shadow: 0 0 20px rgba(231,196,90,0.18), inset 0 1px 0 rgba(255,255,255,0.08);
+  transition: transform 0.2s ease;
+}
+.pot-pill::before { content: '💰'; font-size: 0.85em; filter: saturate(1.1); }
+.pot-pill.bump { animation: potBump 0.35s ease; }
+@keyframes potBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.12); }
+  100% { transform: scale(1); }
 }
 .board-cards {
   display: flex; justify-content: center; gap: 0.4rem;
@@ -336,8 +356,10 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   flex: none;
   font-weight: 800;
   overflow: hidden;
-  animation: dealIn 0.32s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
+/* Only cards explicitly flagged .deal animate in -- prevents the whole
+   board/hole cards re-flipping on every repaint. */
+.card.deal { animation: dealIn 0.36s cubic-bezier(0.22, 1, 0.36, 1) both; }
 .card.small { --w: 34px; border-radius: 5px; }
 .card.red { color: #d21f3c; }
 .card .corner {
@@ -396,14 +418,34 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 .seat.human .seat-inner { border-color: rgba(89, 183, 255, 0.6); box-shadow: 0 0 16px rgba(89,183,255,0.25), var(--shadow-md); }
 .seat.acting .seat-inner {
   border-color: var(--gold);
-  box-shadow: 0 0 0 2px rgba(231, 196, 90, 0.4), 0 0 22px rgba(231, 196, 90, 0.45);
+  box-shadow: 0 0 0 2px rgba(231, 196, 90, 0.45), 0 0 24px rgba(231, 196, 90, 0.5);
   animation: pulseGold 1.6s ease-in-out infinite;
 }
+/* rotating conic "timer" ring around the seat that's on the clock */
+.seat.acting .seat-inner::before {
+  content: '';
+  position: absolute; inset: -3px;
+  border-radius: 14px;
+  padding: 2px;
+  background: conic-gradient(var(--gold), rgba(231,196,90,0.05) 55%, var(--gold));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor; mask-composite: exclude;
+  animation: spin 2.4s linear infinite;
+  pointer-events: none;
+}
+.seat.thinking .seat-inner { animation: pulseGold 0.9s ease-in-out infinite; }
 .seat.winner .seat-inner {
   border-color: var(--good);
-  box-shadow: 0 0 0 2px rgba(86, 200, 119, 0.5), 0 0 26px rgba(86, 200, 119, 0.55);
+  box-shadow: 0 0 0 2px rgba(86, 200, 119, 0.6), 0 0 30px rgba(86, 200, 119, 0.6);
+  animation: winnerPop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
-.seat.folded { opacity: 0.42; filter: saturate(0.5); }
+.seat.folded { opacity: 0.4; filter: saturate(0.45); }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes winnerPop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.09); }
+  100% { transform: scale(1); }
+}
 
 .seat .avatar {
   width: 30px; height: 30px; border-radius: 50%;
@@ -449,11 +491,24 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   font-family: var(--font-num);
   display: flex; align-items: center; gap: 0.28rem;
 }
+.seat .seat-bet .chip-stack {
+  position: relative; display: inline-flex; align-items: flex-end;
+}
+.seat .seat-bet .chip-stack .chip-dot { margin-left: -7px; }
+.seat .seat-bet .chip-stack .chip-dot:first-child { margin-left: 0; }
 .seat .seat-bet .chip-dot {
-  width: 12px; height: 12px; border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #ffd76a, #c9962f);
-  border: 1px solid rgba(0,0,0,0.4);
-  box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset;
+  width: 13px; height: 13px; border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 30%, #ffe08a, #d8a63a 62%, #a9781f);
+  border: 1px solid rgba(0,0,0,0.45);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.22) inset, 0 1px 2px rgba(0,0,0,0.5);
+}
+.seat .seat-bet {
+  animation: betIn 0.25s ease both;
+}
+@keyframes betIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
 }
 .seat .badge-allin {
   display: inline-block; margin-top: 0.15rem;
@@ -485,6 +540,22 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 @keyframes bubbleIn {
   from { opacity: 0; transform: translateX(-50%) translateY(6px) scale(0.85); }
   to   { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+/* animated "thinking" dots on the seat that's on the clock */
+.seat .action-bubble.thinking-dots {
+  border-color: rgba(255,255,255,0.25);
+  display: inline-flex; gap: 3px; padding: 0.28rem 0.5rem;
+}
+.seat .action-bubble.thinking-dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--gold);
+  animation: thinkDot 1s ease-in-out infinite;
+}
+.seat .action-bubble.thinking-dots span:nth-child(2) { animation-delay: 0.18s; }
+.seat .action-bubble.thinking-dots span:nth-child(3) { animation-delay: 0.36s; }
+@keyframes thinkDot {
+  0%, 60%, 100% { opacity: 0.3; transform: translateY(0); }
+  30% { opacity: 1; transform: translateY(-3px); }
 }
 
 /* seat coordinates, 7-max (seat 0 = human, bottom center) */
