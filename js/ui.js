@@ -83,7 +83,7 @@
   el('start-btn').addEventListener('click', () => {
     try {
       coachEnabled = el('coach-toggle').checked;
-      el('genie-panel').style.display = coachEnabled ? '' : 'none';
+      el('genie-fab-wrap').style.display = coachEnabled ? '' : 'none';
       game = new PokerGame(el('venue-select').value, el('stake-select').value, el('name-input').value.trim() || 'You');
       el('setup-screen').style.display = 'none';
       el('game-screen').style.display = 'grid';
@@ -391,6 +391,36 @@
       : `<div class="g-ava">🧞</div><div class="g-bubble">${html}</div>`;
     log.appendChild(row);
     log.scrollTop = log.scrollHeight;
+    // A genie message the player can't see yet => flash the floating icon.
+    if (!opts.user && !genieOpen) flashGenie();
+  }
+
+  /* ---- floating Genie icon (flashes on new advice, opens a card on tap) ---- */
+  let genieOpen = false;
+
+  function flashGenie() {
+    const wrap = el('genie-fab-wrap');
+    const dot = el('genie-dot');
+    if (wrap) wrap.classList.add('has-news');
+    if (dot) dot.hidden = false;
+  }
+  function clearGenieFlash() {
+    const wrap = el('genie-fab-wrap');
+    const dot = el('genie-dot');
+    if (wrap) wrap.classList.remove('has-news');
+    if (dot) dot.hidden = true;
+  }
+  function setGenieOpen(open) {
+    genieOpen = open;
+    const card = el('genie-card');
+    const wrap = el('genie-fab-wrap');
+    if (card) card.hidden = !open;
+    if (wrap) wrap.classList.toggle('open', open);
+    if (open) {
+      clearGenieFlash();
+      const log = el('genie-log');
+      if (log) log.scrollTop = log.scrollHeight;
+    }
   }
 
   function genieChips(chips) {
@@ -611,6 +641,19 @@
   if (nameInput) nameInput.value = randomHero();
   const shuffleBtn = el('name-shuffle');
   if (shuffleBtn) shuffleBtn.addEventListener('click', () => { if (nameInput) nameInput.value = randomHero(); });
+
+  // floating Genie open/close
+  const fab = el('genie-fab');
+  if (fab) fab.addEventListener('click', (e) => { e.stopPropagation(); setGenieOpen(!genieOpen); });
+  const genieClose = el('genie-close');
+  if (genieClose) genieClose.addEventListener('click', (e) => { e.stopPropagation(); setGenieOpen(false); });
+  // tap outside the card (but not on the FAB) closes it
+  document.addEventListener('click', (e) => {
+    if (!genieOpen) return;
+    const wrap = el('genie-fab-wrap');
+    if (wrap && !wrap.contains(e.target)) setGenieOpen(false);
+  });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && genieOpen) setGenieOpen(false); });
 
   /* ---------------- Init ---------------- */
   el('speed-btn').textContent = SPEEDS[speedIdx].label;

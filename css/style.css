@@ -847,6 +847,82 @@ input[type=range]::-moz-range-thumb {
 .g-chip:active { transform: translateY(1px); }
 @keyframes gIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ---------- Floating Genie (flashing icon + pop-out card) ---------- */
+#genie-fab-wrap {
+  position: fixed; right: 20px; top: 50%; transform: translateY(-50%);
+  z-index: 60; display: flex; align-items: center;
+}
+#genie-fab {
+  position: relative;
+  width: 58px; height: 58px; border-radius: 50%;
+  border: 2px solid rgba(124,92,255,0.6);
+  background: radial-gradient(circle at 40% 30%, #8f6bff, #4a2fae 70%);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 0 0 rgba(124,92,255,0.5);
+  cursor: pointer; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  animation: genieBreathe 2.6s ease-in-out infinite;
+  transition: transform 0.12s;
+}
+#genie-fab:hover { transform: scale(1.06); }
+#genie-fab:active { transform: scale(0.96); }
+#genie-fab .genie-fab-ico { font-size: 1.7rem; line-height: 1; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.5)); }
+.genie-dot {
+  position: absolute; top: -2px; right: -2px;
+  width: 15px; height: 15px; border-radius: 50%;
+  background: var(--bad); border: 2px solid #12151a;
+  box-shadow: 0 0 8px rgba(240,96,90,0.8);
+}
+/* gentle idle glow so the icon is noticeable but not annoying */
+@keyframes genieBreathe {
+  0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 0 0 rgba(124,92,255,0.0); }
+  50%      { box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 22px 3px rgba(124,92,255,0.45); }
+}
+/* stronger attention flash when there's unread advice */
+#genie-fab-wrap.has-news #genie-fab { animation: genieFlash 1s ease-in-out infinite; border-color: var(--gold); }
+@keyframes genieFlash {
+  0%, 100% { box-shadow: 0 6px 18px rgba(0,0,0,0.5), 0 0 0 0 rgba(231,196,90,0.0); transform: scale(1); }
+  50%      { box-shadow: 0 6px 22px rgba(0,0,0,0.5), 0 0 26px 5px rgba(231,196,90,0.7); transform: scale(1.07); }
+}
+
+.genie-card {
+  position: absolute; right: calc(100% + 14px); top: 50%; transform: translateY(-50%);
+  width: 330px; max-height: 74vh; display: flex; flex-direction: column;
+  background: var(--panel); border: 1px solid var(--panel-border);
+  border-radius: var(--radius); box-shadow: var(--shadow-lg);
+  backdrop-filter: blur(10px);
+  padding: 0.9rem 1rem 1rem;
+  animation: genieCardIn 0.24s cubic-bezier(0.2,0.9,0.3,1) both;
+}
+.genie-card[hidden] { display: none; }
+@keyframes genieCardIn { from { opacity: 0; transform: translateY(-50%) translateX(14px) scale(0.96); } to { opacity: 1; transform: translateY(-50%) translateX(0) scale(1); } }
+.genie-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.genie-card-title { font-weight: 800; font-size: 0.92rem; }
+.genie-card-title .genie-sub { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--text-faint); font-size: 0.72rem; margin-left: 0.3rem; }
+.genie-close {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--panel-border); background: rgba(255,255,255,0.05);
+  color: var(--text-dim); cursor: pointer; font-size: 0.9rem; line-height: 1;
+}
+.genie-close:hover { background: rgba(255,255,255,0.12); color: var(--text); }
+.genie-card .genie-log { flex: 1; max-height: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  #genie-fab, #genie-fab-wrap.has-news #genie-fab { animation: none; }
+}
+@media (max-width: 700px) {
+  /* transform:none so the fixed card anchors to the viewport, not the wrap
+     (a transformed ancestor would become the card's containing block). */
+  #genie-fab-wrap { right: 14px; top: 42%; transform: none; }
+  #genie-fab { width: 52px; height: 52px; }
+  #genie-fab .genie-fab-ico { font-size: 1.5rem; }
+  /* card fills most of the width, centered over the table */
+  .genie-card {
+    position: fixed; right: 12px; left: 12px; top: 50%; transform: translateY(-50%);
+    width: auto; max-height: 66vh;
+  }
+  @keyframes genieCardIn { from { opacity: 0; transform: translateY(-50%) scale(0.96); } to { opacity: 1; transform: translateY(-50%) scale(1); } }
+}
+
 .coach .verdict {
   display: inline-flex; align-items: center; gap: 0.4rem;
   font-weight: 800; font-size: 0.86rem;

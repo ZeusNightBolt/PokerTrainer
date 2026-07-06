@@ -126,11 +126,6 @@
         <div class="strength-bar"><span id="strength-fill"></span><i class="strength-tick" style="left:50%"></i></div>
         <div class="strength-sub" id="strength-sub">Sit down to see your live win odds.</div>
       </div>
-      <div class="panel genie" id="genie-panel">
-        <h3><span class="ico">🧞</span> Genie <span class="genie-sub">your poker guide</span></h3>
-        <div class="genie-log" id="genie-log"></div>
-        <div class="genie-actions" id="genie-actions"></div>
-      </div>
       <div class="panel">
         <h3><span class="ico">🧮</span> Outs &amp; Equity</h3>
         <div class="metrics" id="outs-content"></div>
@@ -149,6 +144,22 @@
         <h3><span class="ico">📜</span> Hand Log</h3>
         <div class="log" id="log-content"></div>
       </div>
+    </div>
+
+    <!-- Floating Genie: a flashing icon that opens the advice card on tap -->
+    <div id="genie-fab-wrap">
+      <div id="genie-card" class="genie-card" hidden>
+        <div class="genie-card-head">
+          <span class="genie-card-title">🧞 Genie <span class="genie-sub">your poker guide</span></span>
+          <button id="genie-close" class="genie-close" aria-label="Close">✕</button>
+        </div>
+        <div class="genie-log" id="genie-log"></div>
+        <div class="genie-actions" id="genie-actions"></div>
+      </div>
+      <button id="genie-fab" type="button" aria-label="Open the Genie" title="Ask the Genie">
+        <span class="genie-fab-ico">🧞</span>
+        <span class="genie-dot" id="genie-dot" hidden></span>
+      </button>
     </div>
   </section>
 
