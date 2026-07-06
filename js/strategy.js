@@ -51,6 +51,40 @@ function chenScore(cardA, cardB) {
   return Math.ceil(score);
 }
 
+const RANK_NAME = { 14: 'ace', 13: 'king', 12: 'queen', 11: 'jack', 10: 'ten' };
+const rankWord = (r) => RANK_NAME[r] || String(r);
+
+/* Chen score with its component breakdown, so the coach can explain *why*
+   a hand scores what it does rather than just quoting a number. Returns
+   { score, steps:[{label, value}], suited, pair, gap, hi, lo }. */
+function chenBreakdown(cardA, cardB) {
+  const hi = Math.max(cardA.rank, cardB.rank);
+  const lo = Math.min(cardA.rank, cardB.rank);
+  const suited = cardA.suit === cardB.suit;
+  const pair = hi === lo;
+  const base = (r) => (r === 14 ? 10 : r === 13 ? 8 : r === 12 ? 7 : r === 11 ? 6 : r === 10 ? 5 : r / 2);
+
+  const steps = [];
+  let score = base(hi);
+  steps.push({ label: `High card (${rankWord(hi)})`, value: score });
+
+  if (pair) {
+    const doubled = Math.max(score * 2, 5);
+    steps.push({ label: 'Pocket pair — double it (min 5)', value: doubled - score });
+    score = doubled;
+  } else {
+    if (suited) { steps.push({ label: 'Suited', value: 2 }); score += 2; }
+    const gap = hi - lo - 1;
+    let pen = 0;
+    if (gap === 1) pen = -1; else if (gap === 2) pen = -2; else if (gap === 3) pen = -4; else if (gap >= 4) pen = -5;
+    if (pen) { steps.push({ label: `${gap}-card gap`, value: pen }); score += pen; }
+    if (gap <= 1 && hi < 12) { steps.push({ label: 'Connector straight bonus', value: 1 }); score += 1; }
+  }
+  const rounded = Math.ceil(score);
+  if (rounded !== score) steps.push({ label: 'Round up', value: rounded - score });
+  return { score: rounded, steps, suited, pair, gap: hi - lo - 1, hi, lo };
+}
+
 /* 7-handed seat roles, in acting order preflop starting from UTG. */
 const POSITIONS_7MAX = ['UTG', 'UTG1', 'HJ', 'CO', 'BTN', 'SB', 'BB'];
 
@@ -198,7 +232,7 @@ function categoryName(category) {
 }
 
 const STRATEGY_EXPORTS = {
-  chenScore, POSITIONS_7MAX, PREFLOP_THRESHOLDS, preflopAdvice, preflopAdviceFromScore,
+  chenScore, chenBreakdown, POSITIONS_7MAX, PREFLOP_THRESHOLDS, preflopAdvice, preflopAdviceFromScore,
   countOuts, equityFromOuts, potOddsPercent, postflopAdvice, categoryName,
 };
 
