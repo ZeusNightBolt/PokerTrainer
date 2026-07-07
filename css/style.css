@@ -573,6 +573,83 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   100% { transform: scale(1); }
 }
 
+/* ---------- Win celebration: chip payout · seat badge · hero popup ---------- */
+/* heftier, brighter chip than the generic .fly-chip; slides pot -> winner */
+.fly-chip.payout {
+  width: 26px; height: 26px; margin: -13px 0 0 -13px;
+  background: radial-gradient(circle at 38% 32%, #ffe9a8, #e7c45a 60%, #b9963f);
+  box-shadow: inset 0 0 0 3px rgba(255,255,255,0.45), 0 3px 10px rgba(0,0,0,0.7),
+              0 0 12px rgba(231,196,90,0.7);
+  z-index: 95;
+}
+/* floating "+$X / hand" badge above a winning seat */
+.win-badge {
+  position: absolute; left: 50%; bottom: calc(100% - 4px);
+  transform: translateX(-50%);
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 0.28rem 0.6rem; border-radius: 999px;
+  background: linear-gradient(180deg, rgba(20,26,34,0.97), rgba(12,16,22,0.97));
+  border: 1px solid var(--good); color: var(--good);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.55), 0 0 18px rgba(86,200,119,0.4);
+  white-space: nowrap; pointer-events: none; z-index: 20;
+  animation: winBadgeIn 0.5s cubic-bezier(0.22,1,0.36,1) both;
+}
+.win-badge.you {
+  border-color: var(--gold); color: var(--gold);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.6), 0 0 22px rgba(231,196,90,0.55);
+}
+.win-badge .wb-amt { font-family: var(--font-num); font-weight: 800; font-size: 0.95rem; line-height: 1; }
+.win-badge .wb-hand {
+  font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em;
+  text-transform: uppercase; opacity: 0.85;
+}
+.win-badge.out { animation: winBadgeOut 0.55s ease forwards; }
+@keyframes winBadgeIn {
+  0%   { opacity: 0; transform: translateX(-50%) translateY(10px) scale(0.7); }
+  60%  { transform: translateX(-50%) translateY(-4px) scale(1.06); }
+  100% { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+}
+@keyframes winBadgeOut {
+  from { opacity: 1; transform: translateX(-50%) translateY(0) scale(1); }
+  to   { opacity: 0; transform: translateX(-50%) translateY(-14px) scale(0.9); }
+}
+/* centered celebratory card when the HUMAN wins */
+.win-hero {
+  position: absolute; left: 50%; top: 39%;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 0.1rem;
+  padding: 0.7rem 1.5rem; border-radius: 16px;
+  background: radial-gradient(120% 120% at 50% 0%, rgba(37,30,12,0.96), rgba(10,14,20,0.96));
+  border: 1.5px solid var(--gold);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.65), 0 0 34px rgba(231,196,90,0.5),
+              inset 0 0 22px rgba(231,196,90,0.14);
+  pointer-events: none; z-index: 30; text-align: center;
+  animation: winHeroIn 0.55s cubic-bezier(0.22,1,0.36,1) both;
+}
+.win-hero .wh-title {
+  font-size: 0.72rem; font-weight: 800; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--gold);
+}
+.win-hero .wh-amt {
+  font-family: var(--font-num); font-weight: 800; font-size: 1.9rem; line-height: 1.05;
+  background: linear-gradient(90deg, var(--gold), #fff 55%, var(--gold));
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.win-hero .wh-hand { font-size: 0.78rem; font-weight: 700; color: var(--text-dim); }
+.win-hero.out { animation: winHeroOut 0.6s ease forwards; }
+@keyframes winHeroIn {
+  0%   { opacity: 0; transform: translate(-50%, -50%) scale(0.7); }
+  55%  { transform: translate(-50%, -50%) scale(1.08); }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+@keyframes winHeroOut {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -54%) scale(0.94); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .win-badge, .win-hero { animation-duration: 0.001s; }
+}
+
 .seat .avatar {
   width: 30px; height: 30px; border-radius: 50%;
   margin: 0 auto 0.2rem;

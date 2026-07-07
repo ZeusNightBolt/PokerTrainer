@@ -251,6 +251,8 @@
       s.bubble.style.display = 'none';
       s.root.classList.remove('winner', 'folded', 'acting', 'thinking');
     }
+    // clear any win popups left over from the previous hand
+    document.querySelectorAll('.win-badge, .win-hero').forEach((n) => n.remove());
   }
 
   function update(state, ui) {
@@ -359,8 +361,95 @@
     // ----- pot delivered to winner(s) at hand end -----
     if (state.lastResult && !resultHandled) {
       resultHandled = true;
-      bloomPotToWinners([...winners]);
+      celebrateWin(state);
     }
+  }
+
+  /* ---------- win celebration (chip payout + seat badge + hero popup) ------- */
+
+  // A brighter, heftier burst of chips flying from the pot to each winner's
+  // stack — the "chips sliding to the winner" beat every poker room has. Chip
+  // count scales with the amount; the canonical AC palette is used when the
+  // GRAND ATLANTIC shared layer is present, gold otherwise.
+  function payoutBurst(infos) {
+    if (reduce()) return;
+    const from = centreOf(potEl);
+    if (!from) return;
+    const gc = window.GA_CHIPS;
+    for (const info of infos) {
+      const seat = seatEls[info.seat];
+      const to = centreOf(seat && (seat.stackEl || seat.root));
+      if (!to) continue;
+      const bg = gc ? gc.CHIP_STYLE[gc.chipFor(Math.max(1, Math.round(info.amount)))] : null;
+      const count = Math.max(5, Math.min(11, 5 + Math.floor(info.amount / 120)));
+      for (let k = 0; k < count; k++) {
+        const chip = document.createElement('div');
+        chip.className = 'fly-chip payout';
+        if (bg) chip.style.background = bg;
+        chip.style.left = (from.x + (Math.random() - 0.5) * 26) + 'px';
+        chip.style.top = (from.y + (Math.random() - 0.5) * 16) + 'px';
+        document.body.appendChild(chip);
+        const dx = to.x - from.x + (Math.random() - 0.5) * 30;
+        const dy = to.y - from.y + (Math.random() - 0.5) * 20;
+        const delay = k * 55;
+        setTimeout(() => requestAnimationFrame(() => {
+          chip.style.transform = `translate(${dx}px, ${dy}px) scale(0.92)`;
+          chip.style.opacity = '1';
+        }), delay);
+        setTimeout(() => { chip.style.opacity = '0'; }, delay + 640);
+        setTimeout(() => chip.remove(), delay + 1000);
+      }
+    }
+  }
+
+  // A small "+$X / hand" badge that pops above a winning seat.
+  function winBadge(seatIdx, amount, handName) {
+    const seat = seatEls[seatIdx];
+    if (!seat || !seat.root) return;
+    const badge = document.createElement('div');
+    badge.className = 'win-badge' + (seatIdx === HUMAN ? ' you' : '');
+    badge.innerHTML = `<span class="wb-amt">+$${Math.round(amount)}</span>` +
+      (handName ? `<span class="wb-hand">${handName}</span>` : '');
+    seat.root.appendChild(badge);
+    setTimeout(() => badge.classList.add('out'), 2400);
+    setTimeout(() => badge.remove(), 3000);
+  }
+
+  // A centered celebratory card when the HUMAN wins the hand.
+  function winHero(amount, handName, uncontested) {
+    if (!wrap) return;
+    const hero = document.createElement('div');
+    hero.className = 'win-hero';
+    hero.innerHTML =
+      '<span class="wh-title">You win</span>' +
+      `<span class="wh-amt">+$${Math.round(amount)}</span>` +
+      `<span class="wh-hand">${uncontested ? 'Uncontested' : (handName || '')}</span>`;
+    wrap.appendChild(hero);
+    setTimeout(() => hero.classList.add('out'), 2200);
+    setTimeout(() => hero.remove(), 2900);
+  }
+
+  // Orchestrate the end-of-hand celebration from the public result.
+  function celebrateWin(state) {
+    const res = state.lastResult;
+    if (!res || !res.pots) return;
+    const byseat = {};
+    for (const p of res.pots) {
+      const winners = p.winners || [];
+      if (!winners.length) continue;
+      const share = p.amount / winners.length;
+      for (const w of winners) {
+        if (!byseat[w]) byseat[w] = { seat: w, amount: 0, hand: p.handDescription || '' };
+        byseat[w].amount += share;
+        if (p.handDescription) byseat[w].hand = p.handDescription;
+      }
+    }
+    const infos = Object.keys(byseat).map((k) => byseat[k]);
+    if (!infos.length) return;
+    payoutBurst(infos);
+    for (const info of infos) winBadge(info.seat, info.amount, res.showdown ? info.hand : '');
+    const human = byseat[HUMAN];
+    if (human) winHero(human.amount, human.hand, !res.showdown);
   }
 
   window.Table = { init, startHand, update };
