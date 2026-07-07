@@ -263,9 +263,9 @@
     el('btn-fold').disabled = false;
     el('btn-check').disabled = !legal.canCheck;
     el('btn-call').disabled = !legal.canCall;
-    el('btn-call').innerHTML = legal.canCall ? `<span class="ba-ic">🪙</span>Call $${legal.callAmount}` : `<span class="ba-ic">🪙</span>Call`;
+    el('btn-call').innerHTML = legal.canCall ? `Call <span class="ba-amt">$${legal.callAmount}</span>` : `Call`;
     el('btn-bet').disabled = !legal.canRaise;
-    el('btn-bet').innerHTML = legal.canCall ? `<span class="ba-ic">⬆</span>Raise` : `<span class="ba-ic">⬆</span>Bet`;
+    el('btn-bet').innerHTML = legal.canCall ? `<span class="ba-ic">↑</span>Raise` : `<span class="ba-ic">↑</span>Bet`;
 
     const showBet = legal.canRaise;
     el('bet-controls').style.display = showBet ? 'flex' : 'none';
