@@ -251,6 +251,7 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   grid-template-columns: minmax(0, 1fr) 340px;
   gap: 1.1rem;
   align-items: start;
+  margin-top: 0.6rem;
 }
 @media (max-width: 960px) { .game-layout { grid-template-columns: 1fr; } }
 
@@ -258,8 +259,11 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
 .table-wrap {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 10.5;
-  min-height: 430px;
+  /* flatter + a touch shorter than before: less dead felt in the middle */
+  aspect-ratio: 16 / 9.1;
+  min-height: 360px;
+  /* clear the sticky header so the oval's top edge never kisses the nav bar */
+  margin-top: 0.5rem;
   border-radius: 46% / 44%;
   background:
     radial-gradient(58% 52% at 50% 40%, #2a8f63 0%, var(--felt-0) 34%, var(--felt-1) 66%, var(--felt-2) 100%);
@@ -809,19 +813,59 @@ select:focus, input:focus { outline: 2px solid var(--accent-dim); outline-offset
   border: 1px solid rgba(231,196,90,0.3);
   padding: 0.1rem 0.5rem; border-radius: 999px;
 }
-.action-main { display: flex; gap: 0.55rem; flex-wrap: wrap; align-items: center; }
-.action-main .btn { flex: 1 1 auto; min-width: 92px; }
-.btn-fold { color: #ffd7d3; background: linear-gradient(180deg, #7a3634, #5e2725); }
-.btn-check { color: #cfe4ff; background: linear-gradient(180deg, #2f5170, #223b54); }
-.btn-call { color: #c8f5d5; background: linear-gradient(180deg, #2f7a4d, #245c3a); }
-.btn-bet { color: #ffe6b0; background: linear-gradient(180deg, #a07a2f, #7c5d22); }
+/* ---- action buttons styled as casino chips (tactile, mobile-game feel) ---- */
+.action-main { display: flex; gap: 0.5rem; align-items: stretch; }
+.action-main .btn {
+  flex: 1 1 0; min-width: 0; position: relative;
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.34rem;
+  min-height: 50px; padding: 0.45rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.98rem; font-weight: 800; letter-spacing: 0.01em;
+  border: 1px solid rgba(0,0,0,0.35);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.4);
+  /* raised chip: a stacked drop + inset top highlight */
+  box-shadow: 0 4px 0 rgba(0,0,0,0.4), 0 7px 14px rgba(0,0,0,0.4),
+              inset 0 1px 0 rgba(255,255,255,0.22);
+  transition: transform 0.08s, filter 0.15s, box-shadow 0.12s;
+}
+/* the dashed edge inlay that reads instantly as a poker chip */
+.action-main .btn::before {
+  content: ''; position: absolute; inset: 4px;
+  border-radius: 999px;
+  border: 2px dashed rgba(255,255,255,0.32);
+  pointer-events: none;
+}
+.action-main .btn:hover:not(:disabled) { filter: brightness(1.08); }
+.action-main .btn:active:not(:disabled) {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 rgba(0,0,0,0.4), 0 3px 7px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.2);
+}
+.action-main .btn .ba-ic { font-size: 1.05em; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.35)); }
+.btn-fold  { color: #ffe1de; background: radial-gradient(120% 120% at 50% 0%, #9a4340, #6b2b29 70%); }
+.btn-check { color: #dcecff; background: radial-gradient(120% 120% at 50% 0%, #3f668c, #26425f 70%); }
+.btn-call  { color: #d4f7de; background: radial-gradient(120% 120% at 50% 0%, #3c9a61, #256b41 70%); }
+.btn-bet   { color: #fff0cc; background: radial-gradient(120% 120% at 50% 0%, #c79a44, #8a6624 70%); }
 
 .bet-controls {
-  margin-top: 0.75rem;
+  margin-top: 0.7rem;
   display: flex; align-items: center; gap: 0.55rem; flex-wrap: wrap;
 }
+/* bet presets rendered as little chip discs */
 .bet-presets { display: flex; gap: 0.4rem; flex-wrap: wrap; }
-.bet-presets .btn { padding: 0.4rem 0.7rem; font-size: 0.82rem; }
+.bet-presets .btn {
+  padding: 0.36rem 0.7rem; font-size: 0.8rem; font-weight: 800;
+  border-radius: 999px; color: var(--text);
+  background: rgba(255,255,255,0.06);
+  border: 2px dashed rgba(255,255,255,0.24);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
+}
+.bet-presets .btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); border-color: rgba(231,196,90,0.5); }
+#btn-allin {
+  color: #14100a; border-color: rgba(0,0,0,0.3);
+  background: radial-gradient(120% 120% at 50% 0%, #f4d477, var(--gold-dim) 75%);
+  border-style: solid;
+}
+#btn-allin:hover:not(:disabled) { filter: brightness(1.06); background: radial-gradient(120% 120% at 50% 0%, #f4d477, var(--gold-dim) 75%); }
 .slider-wrap { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 220px; }
 input[type=range] {
   flex: 1; height: 6px; -webkit-appearance: none; appearance: none;
