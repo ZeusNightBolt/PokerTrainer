@@ -31,14 +31,17 @@
 | | |
 |---|---|
 | 🃏 **Live-feeling table** | Persistent-DOM renderer with real 3D card flips, chips that physically fly to the pot, tweened stacks and a rotating "on the clock" ring. |
-| 💪 **Hand-strength meter** | A poker-app-style bar + win-% from a Monte Carlo run against the opponents *still in the hand*, tiered Weak → Monster. |
+| 🏆 **Win celebrations** | Take a pot and the table shows it: a burst of chips slides from the pot to the winner's stack, a "+$X · hand" badge pops over the seat, and a centered **"YOU WIN +$480 — a Flush, K-high"** card takes the spotlight — on top of the exact pot-split read-out. |
+| 💪 **Hand-strength meter** | A poker-app-style bar + win-% from a Monte Carlo run against the opponents *still in the hand*, tiered Weak → Monster — and it fills **the moment you're dealt**, so you can read your spot while the action folds around. |
+| 📊 **Analytics panel** | One panel, two lenses. *This hand:* your made hand, your **outs shown as actual cards grouped by what they complete** (e.g. `Flush ×9 — Q♥ J♥ T♥ …`), Rule-of-4-and-2 equity, pot odds and a price verdict. *Session:* $/hand, best pot, hands-won %, showdown win %, **VPIP**, **aggression factor**, variance, and strategy-match %. |
+| 🕹️ **Modern controls** | Fold / Check / Call / Raise as clean, tactile buttons with a real press, chip-disc bet presets and a gold **All-In** — a mobile game, not a worksheet. |
 | 🧞 **Genie assistant** | A chat coach that recommends the play **and explains the reasoning** — tap follow-ups to see the Chen breakdown, position logic, pot-odds math and your outs. |
 | 🤖 **Medium-hard bots** | Randomized skill levels with human-like mistakes, so the table is beatable and natural — not six pros drilling you. Hands run deep and multi-way. |
 | ⏱️ **Realistic pacing** | Opponents "think" for a beat that fits the decision (quick folds, longer for big bets), with Realistic / Fast / Instant speeds. |
 | 🎲 **Play as your hero** | Your default seat name is a random Dragon Ball / Naruto character — re-roll with the dice button. |
 | 📈 **Variance tracker** | At showdown, compares what you *actually* won to your equity's expectation — luck vs. skill, separated. |
 | 🏦 **Real cardroom rules** | Borgata (AC) and Parx (Philly) blinds, buy-ins and rake/time-charge modeled from posted structures. |
-| 📱 **Mobile-first** | Portrait table, thumb-zone action dock, full-size touch targets, zero horizontal overflow. |
+| 📱 **Mobile-first** | Portrait table, a single-line top bar that never crowds the felt, thumb-zone action dock, full-size touch targets, zero horizontal overflow. |
 
 ## 🚀 Quick start
 
