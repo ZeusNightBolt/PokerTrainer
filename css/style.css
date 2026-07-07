@@ -1031,6 +1031,36 @@ input[type=range]::-moz-range-thumb {
 .meter > span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-dim), var(--accent)); transition: width 0.3s; }
 .meter.equity > span { background: linear-gradient(90deg, #2fa863, var(--good)); }
 
+/* combined Analytics panel: sub-section headers */
+.analytics-panel .subhead {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem;
+  font-size: 0.7rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--gold); margin: 0 0 0.5rem;
+}
+.analytics-panel .subhead-sep {
+  margin-top: 0.9rem; padding-top: 0.7rem; border-top: 1px solid var(--stroke);
+}
+.analytics-panel .subhead-note {
+  font-size: 0.62rem; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: none; color: var(--text-dim);
+}
+
+/* "what are my outs" breakdown — the actual out cards, grouped by what they make */
+.outs-break { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 0.4rem; margin: 0.15rem 0 0.1rem; }
+.outs-break.outs-none { font-size: 0.78rem; color: var(--text-dim); line-height: 1.4; }
+.outs-group { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; }
+.og-label { font-size: 0.72rem; color: var(--text-dim); min-width: 6.6rem; }
+.og-label b { color: var(--gold); font-family: var(--font-num); }
+.og-cards { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.ocard {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.5rem; padding: 0.05rem 0.28rem;
+  font-family: var(--font-num); font-weight: 800; font-size: 0.74rem; line-height: 1.5;
+  color: #e9eef5; background: #1a2130;
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 5px;
+}
+.ocard.red { color: #ff8088; }
+
 .log {
   max-height: 210px; overflow-y: auto;
   font-size: 0.82rem; color: var(--text-dim);
@@ -1215,10 +1245,14 @@ button, select, input, .range-cell, .outs-chip {
 @media (max-width: 700px) {
   main { padding: 0.7rem 0.7rem calc(0.7rem + env(safe-area-inset-bottom)); }
 
-  .app-header { padding: 0.55rem 0.8rem; }
-  .app-header .brand { font-size: 0.98rem; }
-  .app-header .brand .logo-mark { width: 24px; height: 24px; }
-  .app-header nav a { font-size: 0.82rem; padding: 0.34rem 0.62rem; }
+  /* Keep the top bar to a SINGLE compact line on phones — wrapping made it
+     tall enough to push the felt down and clip the table edges. */
+  .app-header { padding: 0.5rem 0.7rem; gap: 0.5rem; flex-wrap: nowrap; }
+  .app-header .brand { font-size: 0.95rem; min-width: 0; }
+  .app-header .brand .grad { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .app-header .brand .logo-mark { width: 22px; height: 22px; }
+  .app-header nav { flex-wrap: nowrap; flex: none; gap: 0.2rem; }
+  .app-header nav a { font-size: 0.8rem; padding: 0.3rem 0.5rem; }
 
   .setup-hero h1 { font-size: 1.55rem; }
   .setup-card { padding: 1.1rem; }

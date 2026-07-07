@@ -15,6 +15,7 @@ function loadStats() {
 function defaultStats() {
   return {
     handsPlayed: 0,
+    handsDealt: 0,        // hands dealt to the human (VPIP denominator; counts the live hand)
     decisionsTracked: 0,
     decisionsMatched: 0,
     netWon: 0,
@@ -28,6 +29,14 @@ function defaultStats() {
     // (variance has helped); negative means the opposite (variance has hurt).
     showdownsSeen: 0,
     luckTotal: 0,
+    // richer session texture
+    handsWon: 0,            // hands finished net-positive
+    bestWon: 0,             // biggest single-hand profit
+    showdownsPlayed: 0,     // showdowns the human actually reached (didn't fold)
+    showdownsWon: 0,        // ...of which the human won a share
+    vpipHands: 0,           // hands the human voluntarily put money in preflop
+    aggressiveActions: 0,   // bets + raises + all-ins
+    passiveActions: 0,      // calls
   };
 }
 
@@ -62,6 +71,10 @@ function recordDecision(stats, { street, matched }) {
 function recordHandResult(stats, netDelta) {
   stats.handsPlayed++;
   stats.netWon += netDelta;
+  if (netDelta > 0) {
+    stats.handsWon++;
+    if (netDelta > stats.bestWon) stats.bestWon = netDelta;
+  }
   saveStats(stats);
   return stats;
 }
@@ -73,7 +86,41 @@ function recordVariance(stats, luckDelta) {
   return stats;
 }
 
-const STATS_EXPORTS = { loadStats, saveStats, resetStats, recordDecision, recordHandResult, recordVariance };
+// A showdown the human reached (didn't fold), and whether they won a share.
+function recordShowdownResult(stats, won) {
+  stats.showdownsPlayed++;
+  if (won) stats.showdownsWon++;
+  saveStats(stats);
+  return stats;
+}
+
+// A hand dealt to the human — the VPIP denominator (includes the live hand,
+// so VPIP stays a true share and never exceeds 100%).
+function recordHandDealt(stats) {
+  stats.handsDealt++;
+  saveStats(stats);
+  return stats;
+}
+
+// One voluntary preflop investment (call/bet/raise), counted once per hand.
+function recordVPIP(stats) {
+  stats.vpipHands++;
+  saveStats(stats);
+  return stats;
+}
+
+// Betting texture: aggressive = bet/raise/all-in, passive = call.
+function recordAggression(stats, aggressive) {
+  if (aggressive) stats.aggressiveActions++;
+  else stats.passiveActions++;
+  saveStats(stats);
+  return stats;
+}
+
+const STATS_EXPORTS = {
+  loadStats, saveStats, resetStats, recordDecision, recordHandResult, recordVariance,
+  recordShowdownResult, recordHandDealt, recordVPIP, recordAggression,
+};
 
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = STATS_EXPORTS;
