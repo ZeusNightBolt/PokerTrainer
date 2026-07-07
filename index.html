@@ -126,17 +126,18 @@
         <div class="strength-bar"><span id="strength-fill"></span><i class="strength-tick" style="left:50%"></i></div>
         <div class="strength-sub" id="strength-sub">Sit down to see your live win odds.</div>
       </div>
-      <div class="panel">
-        <h3><span class="ico">🧮</span> Outs &amp; Equity</h3>
+      <div class="panel analytics-panel">
+        <h3><span class="ico">📊</span> Analytics</h3>
+        <div class="subhead">This hand <span class="subhead-note">outs · equity · price</span></div>
         <div class="metrics" id="outs-content"></div>
-      </div>
-      <div class="panel">
-        <h3><span class="ico">📊</span> Session</h3>
+        <div class="subhead subhead-sep">Session</div>
         <div class="metrics" id="stats-content"></div>
         <div style="font-size:0.76rem;color:var(--text-dim);margin-top:0.6rem;line-height:1.5;">
-          <strong>Variance</strong> compares what you actually won at showdown to what your
-          hole cards' preflop equity "should" have won on average -- positive means you've run
-          hot, negative means you've run cold. See <a href="resources.html#counting">Reference</a>.
+          <strong>VPIP</strong> is how often you voluntarily put money in preflop (looseness);
+          <strong>Aggression</strong> is bets+raises per call. <strong>Variance</strong> compares
+          what you actually won at showdown to what your hole cards' preflop equity "should" have
+          won on average -- positive means you've run hot, negative cold.
+          See <a href="resources.html#counting">Reference</a>.
         </div>
         <button class="btn ghost" id="reset-stats-btn" style="margin-top:0.7rem;width:100%;font-size:0.82rem;padding:0.4rem;">Reset stats</button>
       </div>

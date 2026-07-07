@@ -126,7 +126,8 @@ function preflopAdvice({ holeCards, position, numRaisesInFront }) {
 
 /* ---------- Postflop: outs, Rule of 4/2, pot odds ---------- */
 
-const { evaluateBest, HAND_CATEGORY } = (typeof module !== 'undefined' && module.exports ? require('./cards.js') : window);
+const { evaluateBest, HAND_CATEGORY, HAND_CATEGORY_NAME, rankLabel, SUIT_SYMBOL } =
+  (typeof module !== 'undefined' && module.exports ? require('./cards.js') : window);
 
 function unseenCards(known) {
   const knownKeys = new Set(known.map((c) => `${c.rank}${c.suit}`));
@@ -170,6 +171,30 @@ function countOuts(holeCards, board) {
    since the plain rule overstates equity for combo draws. This tracks
    true two-card equity closely (e.g. 12 outs: 48-4=44 vs. true ~45%;
    15 outs: 60-7=53 vs. true ~54%). */
+/* Like countOuts, but returns the actual out CARDS grouped by the hand they
+   complete: [{ makes, cards: [{rank,suit}] }], biggest group first, each
+   group's cards sorted high-to-low. Powers the "what exactly are my outs"
+   breakdown in the UI. Same category-upgrade definition as countOuts (a bare
+   High-Card -> Pair is not treated as an out). */
+function describeOuts(holeCards, board) {
+  if (board.length < 3 || board.length >= 5) return [];
+  const current = evaluateBest([...holeCards, ...board]).score;
+  const candidates = unseenCards([...holeCards, ...board]);
+  const groups = new Map();
+  for (const card of candidates) {
+    const improved = evaluateBest([...holeCards, ...board, card]).score;
+    if (improved[0] <= current[0]) continue;
+    if (current[0] === HAND_CATEGORY.HIGH_CARD && improved[0] === HAND_CATEGORY.PAIR) continue;
+    const makes = HAND_CATEGORY_NAME[improved[0]];
+    if (!groups.has(makes)) groups.set(makes, []);
+    groups.get(makes).push(card);
+  }
+  for (const cards of groups.values()) cards.sort((a, b) => b.rank - a.rank || a.suit.localeCompare(b.suit));
+  return [...groups.entries()]
+    .map(([makes, cards]) => ({ makes, cards }))
+    .sort((a, b) => b.cards.length - a.cards.length);
+}
+
 function equityFromOuts(outs, cardsToCome) {
   if (cardsToCome === 2) {
     const equity = outs <= 8 ? outs * 4 : outs * 4 - (outs - 8);
@@ -233,7 +258,7 @@ function categoryName(category) {
 
 const STRATEGY_EXPORTS = {
   chenScore, chenBreakdown, POSITIONS_7MAX, PREFLOP_THRESHOLDS, preflopAdvice, preflopAdviceFromScore,
-  countOuts, equityFromOuts, potOddsPercent, postflopAdvice, categoryName,
+  countOuts, describeOuts, equityFromOuts, potOddsPercent, postflopAdvice, categoryName,
 };
 
 if (typeof module !== 'undefined' && module.exports) {

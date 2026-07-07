@@ -5,6 +5,7 @@
   let pendingAdvice = null;   // { street, advice } for the current human decision
   let lastDecision = null;    // { matched, chosenLabel, recLabel, street } after the human acts
   let preHandHumanStack = 0;
+  let vpipCountedThisHand = false; // ensures VPIP counts at most once per hand
   let coachEnabled = true;
 
   const el = (id) => document.getElementById(id);
@@ -113,6 +114,8 @@
     preHandHumanStack = game.seats[HUMAN_SEAT].stack + game.seats[HUMAN_SEAT].committedHand;
     pendingAdvice = null;
     lastDecision = null;
+    vpipCountedThisHand = false;
+    stats = recordHandDealt(stats);
     bubbles = {};
     thinkingSeat = null;
     try { resetStrength(); if (coachEnabled) { genieReset(); genieSay('New hand dealt. I\'ll weigh in when it\'s your move. 🪄'); } } catch (e) { console.error(e); }
@@ -218,6 +221,11 @@
       `<button class="btn gold" id="next-hand-btn">Deal Next Hand ▸</button>`;
     el('next-hand-btn').addEventListener('click', dealNextHand);
     stats = recordHandResult(stats, net);
+    // Showdown reached by the human (didn't fold): track win rate at showdown.
+    if (r.showdown && !game.seats[HUMAN_SEAT].folded) {
+      const humanWon = r.pots.some((pp) => pp.winners.includes(HUMAN_SEAT));
+      stats = recordShowdownResult(stats, humanWon);
+    }
     renderStats();
     genieWrapUp(net, r);
   }
@@ -297,6 +305,15 @@
       };
       stats = recordDecision(stats, { street: pendingAdvice.street, matched });
       renderStats();
+    }
+    // Session texture (independent of the coach): betting aggression + VPIP.
+    if (action === 'call') stats = recordAggression(stats, false);
+    else if (action === 'bet' || action === 'raise' || action === 'allin') stats = recordAggression(stats, true);
+    const preflop = game.board.length === 0;
+    if (preflop && !vpipCountedThisHand &&
+        (action === 'call' || action === 'bet' || action === 'raise' || action === 'allin')) {
+      vpipCountedThisHand = true;
+      stats = recordVPIP(stats);
     }
     const legal = game.legalActionsFor(HUMAN_SEAT);
     game.act(HUMAN_SEAT, action, amount);
@@ -562,17 +579,38 @@
       c.innerHTML = `<span class="k">Made hand</span><span class="v gold">${describeScore(best.score)}</span>`;
       return;
     }
+    const madeNow = describeScore(evaluateBest([...human.holeCards, ...board]).score);
     const { outs, cardsToCome } = countOuts(human.holeCards, board);
+    const groups = describeOuts(human.holeCards, board);
     const equity = equityFromOuts(outs, cardsToCome);
     const oddsNeeded = potOddsPercent(legal.callAmount, pot);
     const facing = legal.callAmount > 0;
     const priceOk = equity >= oddsNeeded;
     c.innerHTML =
+      `<span class="k">Made now</span><span class="v">${madeNow}</span>` +
       `<span class="k">Outs</span><span class="v gold">${outs}</span>` +
+      outsBreakdownHTML(groups) +
       `<span class="k">Equity (Rule of ${cardsToCome === 2 ? '4' : '2'})</span><span class="v">${equity}%</span>` +
       `<div class="meter equity"><span style="width:${Math.min(equity, 100)}%"></span></div>` +
       `<span class="k">Pot odds needed</span><span class="v">${facing ? oddsNeeded.toFixed(1) + '%' : '—'}</span>` +
       `<span class="k">Correct price?</span><span class="v ${facing ? (priceOk ? 'good' : 'bad') : ''}">${facing ? (priceOk ? 'Yes ✓' : 'No ✗') : '—'}</span>`;
+  }
+
+  // The actual out cards, grouped by what they make, as a compact chip row.
+  function outsBreakdownHTML(groups) {
+    if (!groups || !groups.length) {
+      return `<div class="outs-break outs-none">No category-upgrading outs — your equity is what you've already made.</div>`;
+    }
+    const cardChip = (card) => {
+      const red = card.suit === 'h' || card.suit === 'd';
+      return `<span class="ocard${red ? ' red' : ''}">${rankLabel(card.rank)}${SUIT_SYMBOL[card.suit]}</span>`;
+    };
+    return `<div class="outs-break">` + groups.map((g) =>
+      `<div class="outs-group">` +
+        `<span class="og-label">${g.makes} <b>×${g.cards.length}</b></span>` +
+        `<span class="og-cards">${g.cards.map(cardChip).join('')}</span>` +
+      `</div>`
+    ).join('') + `</div>`;
   }
 
   function holeLabel(cards) {
@@ -610,22 +648,50 @@
   function renderStats() {
     const pct = (m, d) => (d ? Math.round((100 * m) / d) : 0);
     const overall = pct(stats.decisionsMatched, stats.decisionsTracked);
+    const hands = stats.handsPlayed;
     const net = Math.round(stats.netWon);
     const netCls = net > 0 ? 'good' : net < 0 ? 'bad' : '';
+
+    // $/hand — the honest "are you beating the game" number.
+    const perHand = hands ? stats.netWon / hands : 0;
+    const perHandStr = hands ? `${perHand >= 0 ? '+' : '-'}$${Math.abs(perHand).toFixed(1)}` : '—';
+    const perHandCls = hands ? (perHand > 0 ? 'good' : perHand < 0 ? 'bad' : '') : '';
+
+    const winRate = hands ? pct(stats.handsWon, hands) : null;
+    const sdWin = stats.showdownsPlayed ? pct(stats.showdownsWon, stats.showdownsPlayed) : null;
+    // Denominator is hands DEALT (includes the live hand) so VPIP is a true
+    // share and never exceeds 100% mid-hand.
+    const vpipDenom = stats.handsDealt || hands;
+    const vpip = vpipDenom ? Math.min(100, pct(stats.vpipHands, vpipDenom)) : null;
+
+    // Aggression factor = (bets+raises) / calls, the classic tracker stat.
+    const af = stats.passiveActions
+      ? (stats.aggressiveActions / stats.passiveActions)
+      : (stats.aggressiveActions ? Infinity : null);
+    const afStr = af == null ? '—' : af === Infinity ? '∞' : af.toFixed(1);
+
     const luck = Math.round(stats.luckTotal || 0);
     const luckCls = luck > 0 ? 'good' : luck < 0 ? 'bad' : '';
     const luckRow = stats.showdownsSeen
       ? `<span class="k">Variance (${stats.showdownsSeen} showdown${stats.showdownsSeen === 1 ? '' : 's'})</span>` +
         `<span class="v ${luckCls}">${luck >= 0 ? '+' : '-'}$${Math.abs(luck)}</span>`
       : `<span class="k">Variance</span><span class="v">— (no showdowns yet)</span>`;
+
+    const row = (k, v, cls = '') => `<span class="k">${k}</span><span class="v ${cls}">${v}</span>`;
     el('stats-content').innerHTML =
-      `<span class="k">Hands played</span><span class="v">${stats.handsPlayed}</span>` +
-      `<span class="k">Net result</span><span class="v ${netCls}">${net >= 0 ? '+' : '-'}$${Math.abs(net)}</span>` +
+      row('Hands played', hands) +
+      row('Net result', `${net >= 0 ? '+' : '-'}$${Math.abs(net)}`, netCls) +
+      row('Per hand', perHandStr, perHandCls) +
+      row('Best pot won', stats.bestWon > 0 ? `+$${Math.round(stats.bestWon)}` : '—') +
+      row('Hands won', winRate == null ? '—' : `${winRate}%`) +
+      row('Showdown win', sdWin == null ? '—' : `${sdWin}% (${stats.showdownsWon}/${stats.showdownsPlayed})`) +
+      row('VPIP', vpip == null ? '—' : `${vpip}%`) +
+      row('Aggression', afStr) +
+      luckRow +
       `<span class="k">Strategy match</span><span class="v gold">${overall}%</span>` +
       `<div class="meter"><span style="width:${overall}%"></span></div>` +
-      `<span class="k">Preflop</span><span class="v">${pct(stats.preflopMatched, stats.preflopDecisions)}%</span>` +
-      `<span class="k">Postflop</span><span class="v">${pct(stats.postflopMatched, stats.postflopDecisions)}%</span>` +
-      luckRow;
+      row('Preflop', `${pct(stats.preflopMatched, stats.preflopDecisions)}%`) +
+      row('Postflop', `${pct(stats.postflopMatched, stats.postflopDecisions)}%`);
   }
 
   el('reset-stats-btn').addEventListener('click', () => { stats = resetStats(); renderStats(); });
