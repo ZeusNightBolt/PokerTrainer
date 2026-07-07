@@ -118,7 +118,10 @@
     stats = recordHandDealt(stats);
     bubbles = {};
     thinkingSeat = null;
-    try { resetStrength(); if (coachEnabled) { genieReset(); genieSay('New hand dealt. I\'ll weigh in when it\'s your move. 🪄'); } } catch (e) { console.error(e); }
+    // Populate the strength meter + "this hand" analytics the moment cards
+    // are dealt (not only when it's your turn), so you can read your spot as
+    // the action folds around to you.
+    try { previewHand(); if (coachEnabled) { genieReset(); genieSay('New hand dealt. I\'ll weigh in when it\'s your move. 🪄'); } } catch (e) { console.error(e); }
     try { Table.startHand(game.getPublicState()); } catch (e) { console.error(e); }
     advance();
   }
@@ -260,9 +263,9 @@
     el('btn-fold').disabled = false;
     el('btn-check').disabled = !legal.canCheck;
     el('btn-call').disabled = !legal.canCall;
-    el('btn-call').textContent = legal.canCall ? `Call $${legal.callAmount}` : 'Call';
+    el('btn-call').innerHTML = legal.canCall ? `Call <span class="ba-amt">$${legal.callAmount}</span>` : `Call`;
     el('btn-bet').disabled = !legal.canRaise;
-    el('btn-bet').textContent = legal.canCall ? 'Raise ▸' : 'Bet ▸';
+    el('btn-bet').innerHTML = legal.canCall ? `<span class="ba-ic">↑</span>Raise` : `<span class="ba-ic">↑</span>Bet`;
 
     const showBet = legal.canRaise;
     el('bet-controls').style.display = showBet ? 'flex' : 'none';
@@ -363,6 +366,18 @@
     fill.className = tier.cls;
     const made = game.board.length >= 3 ? describeScore(evaluateBest([...human.holeCards, ...game.board]).score) : holeLabel(human.holeCards);
     el('strength-sub').textContent = `${made} — win odds vs ${opps} opponent${opps === 1 ? '' : 's'} still in the hand`;
+  }
+
+  // Fill the strength meter + "this hand" analytics from the freshly dealt
+  // hole cards, before any betting action (a neutral no-bet context so the
+  // pot-odds row reads "—" until you actually face a bet).
+  function previewHand() {
+    const human = game.seats[HUMAN_SEAT];
+    if (!human || !human.holeCards) { resetStrength(); return; }
+    const noBet = { callAmount: 0, canCheck: true, canCall: false, canRaise: false };
+    const pot = game.potTotal();
+    renderStrength(human, noBet, pot);
+    renderOuts(human, noBet, pot);
   }
 
   function resetStrength() {
