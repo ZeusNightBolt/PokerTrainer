@@ -26,14 +26,18 @@
     <div class="setup-card">
       <div class="setup-row">
         <label for="venue-select">Cardroom</label>
-        <select id="venue-select">
+        <!-- cinematic venue reel — drives the (hidden) select below -->
+        <div class="venue-reel" id="venue-reel" role="group" aria-label="Choose a cardroom"></div>
+        <select id="venue-select" class="sr-select" aria-hidden="true" tabindex="-1">
           <option value="borgata">Borgata Poker Room — Atlantic City, NJ</option>
           <option value="parx">Parx Casino Poker Room — Bensalem, PA (Philadelphia)</option>
         </select>
       </div>
       <div class="setup-row">
-        <label for="stake-select">Stakes</label>
-        <select id="stake-select"></select>
+        <label for="stake-select">Pick a table</label>
+        <!-- table cards — mirror the (hidden) stakes select -->
+        <div class="stake-cards" id="stake-cards" role="group" aria-label="Choose a table"></div>
+        <select id="stake-select" class="sr-select" aria-hidden="true" tabindex="-1"></select>
       </div>
       <div class="setup-row">
         <div class="venue-notes" id="venue-notes"></div>

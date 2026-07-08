@@ -1386,3 +1386,106 @@ button, select, input, .range-cell, .outs-chip {
   .table-wrap { min-height: 400px; }
   .action-main .btn { min-width: 64px; font-size: 0.92rem; }
 }
+
+/* ---------- Setup visuals: venue reel + table cards ---------- */
+/* the real <select>s stay in the DOM (game logic + bankroll gating read them)
+   but the player interacts with the cards */
+.sr-select {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  opacity: 0; pointer-events: none;
+  margin: 0; padding: 0; border: 0;
+}
+.venue-reel {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.7rem;
+}
+.venue-card {
+  position: relative;
+  display: flex; flex-direction: column; align-items: center; gap: 0.15rem;
+  padding: 0.9rem 0.8rem 0.75rem;
+  border-radius: 14px;
+  border: 1px solid var(--panel-border);
+  background: linear-gradient(180deg, #141b26, #0d121a);
+  color: var(--text);
+  cursor: pointer;
+  overflow: hidden;
+  transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease;
+}
+/* cinematic sheen: a slow light sweep across each marquee */
+.venue-card::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 246, 221, 0.07) 45%, transparent 60%);
+  background-size: 260% 100%;
+  animation: venueSheen 5.5s ease-in-out infinite;
+  pointer-events: none;
+}
+.venue-card:nth-child(2)::after { animation-delay: 2.7s; }
+@keyframes venueSheen {
+  0%, 55% { background-position: 130% 0; }
+  85%, 100% { background-position: -130% 0; }
+}
+.venue-card:hover { transform: translateY(-2px); border-color: rgba(231, 196, 90, 0.45); }
+.venue-card.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 8px 22px rgba(0, 0, 0, 0.35), 0 0 22px rgba(231, 196, 90, 0.22);
+  background: linear-gradient(180deg, #1a2130, #10151d);
+}
+.vc-marquee { width: 56px; height: 56px; }
+.vc-marquee svg { width: 100%; height: 100%; animation: venueFloat 4.2s ease-in-out infinite; }
+.venue-card:nth-child(2) .vc-marquee svg { animation-delay: 1.4s; }
+@keyframes venueFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.vc-name { font-weight: 800; font-size: 0.92rem; margin-top: 0.2rem; }
+.vc-tag { font-size: 0.68rem; color: var(--text-dim); letter-spacing: 0.04em; }
+.venue-card.selected .vc-name { color: var(--gold); }
+
+.stake-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+  gap: 0.55rem;
+}
+.stake-card {
+  display: flex; flex-direction: column; align-items: center; gap: 0.22rem;
+  padding: 0.7rem 0.5rem 0.6rem;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.stake-card:hover:not(.locked) { transform: translateY(-2px); border-color: rgba(231, 196, 90, 0.4); }
+.stake-card.selected {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 1px var(--gold), 0 0 16px rgba(231, 196, 90, 0.2);
+  background: rgba(231, 196, 90, 0.06);
+}
+.stake-card.locked { opacity: 0.45; cursor: not-allowed; filter: saturate(0.5); }
+.sc-chip {
+  position: relative;
+  width: 40px; height: 40px; border-radius: 50%;
+  display: grid; place-items: center;
+  font-family: var(--font-num); font-weight: 800; font-size: 0.78rem; color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.35), 0 3px 8px rgba(0, 0, 0, 0.45);
+}
+.sc-chip i {
+  position: absolute; inset: 3px;
+  border-radius: 50%;
+  border: 2px dashed rgba(255, 255, 255, 0.4);
+}
+.sc-red    { background: radial-gradient(circle at 38% 30%, #d95c52, #8e2c24 75%); }
+.sc-black  { background: radial-gradient(circle at 38% 30%, #4a5261, #171b22 75%); }
+.sc-purple { background: radial-gradient(circle at 38% 30%, #8b6bc4, #4a2f7e 75%); }
+.sc-gold   { background: radial-gradient(circle at 38% 30%, #f0cd75, #9a7a3a 75%); color: #2a1e05; text-shadow: none; }
+.sc-blinds { font-family: var(--font-num); font-weight: 800; font-size: 0.95rem; }
+.stake-card.selected .sc-blinds { color: var(--gold); }
+.sc-buyin { font-size: 0.64rem; color: var(--text-dim); text-align: center; line-height: 1.35; }
+@media (prefers-reduced-motion: reduce) {
+  .venue-card::after, .vc-marquee svg { animation: none; }
+}

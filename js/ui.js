@@ -81,6 +81,112 @@
   el('venue-select').addEventListener('change', populateStakes);
   el('stake-select').addEventListener('change', () => renderVenueNotes(CASINO_RULES[el('venue-select').value]));
 
+  /* -------- Setup visuals: cinematic venue reel + table cards -------------
+     Graphical pickers that MIRROR the hidden <select>s. Everything downstream
+     (game start, ga-glue's bankroll gating) keeps reading #venue-select /
+     #stake-select — the cards just drive them, so no game logic changes.   */
+  const VENUE_ART = {
+    borgata: {
+      tag: 'Atlantic City boardwalk',
+      svg: '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+        '<defs><linearGradient id="vgB" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f7df9a"/><stop offset="1" stop-color="#a5813d"/></linearGradient></defs>' +
+        '<rect x="24" y="8" width="16" height="34" rx="7" fill="url(#vgB)"/>' +
+        '<rect x="28" y="14" width="8" height="3" rx="1.5" fill="#0a0e14" opacity=".55"/>' +
+        '<rect x="28" y="21" width="8" height="3" rx="1.5" fill="#0a0e14" opacity=".55"/>' +
+        '<rect x="28" y="28" width="8" height="3" rx="1.5" fill="#0a0e14" opacity=".55"/>' +
+        '<circle cx="46" cy="14" r="5" fill="#e9bd5c" opacity=".9"/>' +
+        '<path d="M8 48q8-5 16 0t16 0 16 0" fill="none" stroke="#59b7ff" stroke-width="2.4" stroke-linecap="round" opacity=".8"/>' +
+        '<path d="M12 55q8-4 14 0t14 0 12 0" fill="none" stroke="#2c7fc4" stroke-width="2" stroke-linecap="round" opacity=".5"/></svg>',
+    },
+    parx: {
+      tag: 'Philadelphia · Bensalem',
+      svg: '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+        '<defs><linearGradient id="vgP" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff8088"/><stop offset="1" stop-color="#b03a30"/></linearGradient></defs>' +
+        '<path d="M16 44V28a16 16 0 0 1 32 0v16" fill="none" stroke="url(#vgP)" stroke-width="7" stroke-linecap="round"/>' +
+        '<circle cx="19.5" cy="34" r="2" fill="#0a0e14"/><circle cx="23" cy="24" r="2" fill="#0a0e14"/>' +
+        '<circle cx="32" cy="19.5" r="2" fill="#0a0e14"/><circle cx="41" cy="24" r="2" fill="#0a0e14"/><circle cx="44.5" cy="34" r="2" fill="#0a0e14"/>' +
+        '<path d="M12 54h40M18 49h28" stroke="#e7c45a" stroke-width="2.2" stroke-linecap="round" opacity=".7"/></svg>',
+    },
+  };
+  const venueShort = (name) => name.split('—')[0].trim();
+
+  function initVenueReel() {
+    const reel = el('venue-reel');
+    if (!reel) return;
+    const sel = el('venue-select');
+    reel.innerHTML = '';
+    for (const [key, venue] of Object.entries(CASINO_RULES)) {
+      const art = VENUE_ART[key] || { tag: '', svg: '<svg viewBox="0 0 64 64"><circle cx="32" cy="32" r="20" fill="#e7c45a"/></svg>' };
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'venue-card';
+      card.dataset.venue = key;
+      card.setAttribute('aria-label', `Play at ${venueShort(venue.name)}`);
+      card.innerHTML =
+        `<span class="vc-marquee">${art.svg}</span>` +
+        `<span class="vc-name">${venueShort(venue.name)}</span>` +
+        `<span class="vc-tag">${art.tag}</span>`;
+      card.addEventListener('click', () => {
+        if (sel.value !== key) {
+          sel.value = key;
+          sel.dispatchEvent(new Event('change'));
+        }
+        syncSetupVisuals();
+      });
+      reel.appendChild(card);
+    }
+  }
+
+  function renderStakeCards() {
+    const wrap = el('stake-cards');
+    if (!wrap) return;
+    const venue = CASINO_RULES[el('venue-select').value];
+    const sel = el('stake-select');
+    wrap.innerHTML = '';
+    for (const stake of venue.stakes) {
+      const opt = [...sel.options].find((o) => o.value === stake.key);
+      const locked = !!(opt && opt.disabled);
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = 'stake-card' + (locked ? ' locked' : '');
+      card.dataset.stake = stake.key;
+      const chipCls = stake.bb >= 25 ? 'sc-gold' : stake.bb >= 10 ? 'sc-purple' : stake.bb >= 5 ? 'sc-black' : 'sc-red';
+      card.innerHTML =
+        `<span class="sc-chip ${chipCls}"><i></i>$${stake.bb}</span>` +
+        `<span class="sc-blinds">$${stake.sb}/$${stake.bb}</span>` +
+        `<span class="sc-buyin">${locked ? `🔒 needs $${stake.minBuyIn} bankroll` : `buy-in $${stake.minBuyIn}–${stake.maxBuyIn || '∞'}`}</span>`;
+      card.addEventListener('click', () => {
+        if (locked) return;
+        sel.value = stake.key;
+        sel.dispatchEvent(new Event('change'));
+        syncSetupVisuals();
+      });
+      wrap.appendChild(card);
+    }
+    syncSetupVisuals();
+  }
+
+  function syncSetupVisuals() {
+    const vk = el('venue-select').value, sk = el('stake-select').value;
+    document.querySelectorAll('.venue-card').forEach((c) => c.classList.toggle('selected', c.dataset.venue === vk));
+    document.querySelectorAll('.stake-card').forEach((c) => c.classList.toggle('selected', c.dataset.stake === sk));
+  }
+
+  // Re-render the cards whenever the underlying select changes shape — a venue
+  // switch rebuilds its options, and the shared-bankroll gate (ga-glue) locks
+  // or unlocks stakes live. The observer keeps the cards honest regardless of
+  // which listener ran last.
+  el('venue-select').addEventListener('change', renderStakeCards);
+  el('stake-select').addEventListener('change', syncSetupVisuals);
+  if (el('stake-cards') && typeof MutationObserver !== 'undefined') {
+    let scheduled = false;
+    new MutationObserver(() => {
+      if (scheduled) return;
+      scheduled = true;
+      requestAnimationFrame(() => { scheduled = false; renderStakeCards(); });
+    }).observe(el('stake-select'), { childList: true, subtree: true, attributes: true });
+  }
+
   el('start-btn').addEventListener('click', () => {
     try {
       coachEnabled = el('coach-toggle').checked;
@@ -101,13 +207,26 @@
   function dealNextHand() {
     if (!game.humanCanContinue()) {
       const rebuyMax = game.stake.maxBuyIn || game.stake.minBuyIn * 6;
-      if (!confirm(`You're out of chips. Rebuy for $${rebuyMax} and keep playing ${game.stake.label}?`)) {
+      if (window.GA && typeof window.GA_INSUFFICIENT_FUNDS === 'function') {
+        // GRAND ATLANTIC: chips come from the shared bankroll — never minted.
+        // rebuyHuman is clamped to the money behind; if the wallet can't cover
+        // more, the in-app dialog offers the lobby (the front desk reset).
+        game.rebuyHuman(rebuyMax);
+        if (!game.humanCanContinue()) {
+          window.GA_INSUFFICIENT_FUNDS(`You're out of chips and your bankroll can't cover more at this ${game.stake.label} table.`);
+          el('hand-result').style.display = 'block';
+          el('hand-result').innerHTML = '<div class="headline">Out of chips</div><div class="detail">Your shared bankroll can\'t cover this table — reset at the front desk, or pick smaller stakes.</div>';
+          el('action-dock').style.display = 'none';
+          return;
+        }
+      } else if (!confirm(`You're out of chips. Rebuy for $${rebuyMax} and keep playing ${game.stake.label}?`)) {
         el('hand-result').style.display = 'block';
         el('hand-result').innerHTML = '<div class="headline">Session over</div><div class="detail">Refresh to sit down again.</div>';
         el('action-dock').style.display = 'none';
         return;
+      } else {
+        game.rebuyHuman(rebuyMax);
       }
-      game.rebuyHuman(rebuyMax);
     }
     el('hand-result').style.display = 'none';
     game.newHand();
@@ -739,5 +858,7 @@
   /* ---------------- Init ---------------- */
   el('speed-btn').textContent = SPEEDS[speedIdx].label;
   populateStakes();
+  initVenueReel();
+  renderStakeCards();
   renderStats();
 })();
